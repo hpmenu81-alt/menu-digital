@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Menu HP103</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="bg-orange-50 min-h-screen p-4 font-sans">
+  <div class="max-w-md mx-auto bg-white rounded-3xl p-5 shadow-xl">
+    <h1 class="text-xl font-black uppercase text-slate-900 mb-1">Admin Menu</h1>
+    <p class="text-xs font-bold text-slate-400 mb-5">Happy Puppy Panjaitan Samarinda</p>
+    <section id="login-panel"><form id="login-form" class="space-y-3"><label class="block">Email<input id="email" type="email" autocomplete="username" required class="w-full p-3 bg-slate-100 rounded-xl"></label><label class="block">Password<input id="password" type="password" autocomplete="current-password" required class="w-full p-3 bg-slate-100 rounded-xl"></label><button id="login-button" class="bg-orange-500 text-white p-3 rounded-xl">Masuk</button></form></section><button id="logout" hidden class="my-3 p-2 bg-slate-200 rounded-xl">Keluar</button><div id="status" role="status" aria-live="polite" class="my-3"></div><section id="admin-content" hidden>
+<div class="grid grid-cols-2 gap-2 mb-5">
+  <button onclick="showTab('form')" id="tabForm" class="bg-orange-500 text-white rounded-2xl py-3 font-black text-xs uppercase">
+    Tambah / Edit
+  </button>
+  <button onclick="showTab('list')" id="tabList" class="bg-slate-200 text-slate-700 rounded-2xl py-3 font-black text-xs uppercase">
+    Kelola Menu
+  </button>
+</div>
+    <a href="index.html" target="_blank" rel="noopener noreferrer"
+class="block w-full text-center bg-slate-900 text-white rounded-2xl py-3 font-black text-xs uppercase mb-5">
+  👀 Lihat Menu Customer
+</a>
+
+    <input id="edit_id" type="hidden">
+
+    <div id="panelForm" class="space-y-3">
+      <input id="nama" class="w-full bg-slate-100 rounded-2xl p-4 text-sm font-bold outline-none" placeholder="Nama menu">
+
+      <input id="harga" type="number" min="1" step="1" class="w-full bg-slate-100 rounded-2xl p-4 text-sm font-bold outline-none" placeholder="Harga">
+
+      <input
+id="kategori"
+list="kategori-list"
+class="w-full bg-slate-100 rounded-2xl p-4 text-sm font-bold outline-none"
+placeholder="Kategori (FOOD, MINUMAN, PAKET, dll)">
+
+<datalist id="kategori-list">
+  <option value="FOOD">
+  <option value="SNACK">
+  <option value="HOT SNACK">
+  <option value="MINUMAN">
+  <option value="ROKOK">
+  <option value="KOREK">
+  <option value="PAKET">
+</datalist>
+
+      <textarea id="deskripsi" class="w-full bg-slate-100 rounded-2xl p-4 text-sm font-bold outline-none" placeholder="Deskripsi menu / isi paket / info promo"></textarea>
+
+      <input id="foto" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="previewFoto()" class="w-full bg-slate-100 rounded-2xl p-4 text-sm font-bold">
+
+<img id="previewFoto" class="hidden w-full h-48 object-cover rounded-2xl bg-slate-100">
+<p id="fotoHint" class="hidden text-xs font-bold text-orange-600">
+  Kosongkan foto jika tidak ingin mengganti foto lama.
+</p>
+
+      <label class="flex items-center gap-2 text-sm font-bold">
+  <input id="best_seller" type="checkbox">
+  Best Seller
+</label>
+
+<label class="flex items-center gap-2 text-sm font-bold">
+  <input id="promo" type="checkbox">
+  Promo
+</label>
+      <button onclick="simpanMenu()" id="btn-simpan" class="w-full bg-orange-500 text-white rounded-2xl py-4 font-black uppercase">
+        Simpan Menu
+      </button>
+
+      <button onclick="resetForm()" class="w-full bg-slate-200 text-slate-700 rounded-2xl py-3 font-black uppercase">
+        Reset Form
+      </button>
+    </div>
+
+    
+
+    <div id="panelList" class="hidden mt-6 border-t pt-5">
+      <h2 class="text-lg font-black uppercase text-slate-900 mb-3">Daftar Menu</h2>
+
+<input id="searchAdmin" oninput="renderAdmin()" 
+class="w-full bg-slate-100 rounded-2xl p-4 text-sm font-bold outline-none mb-3" 
+placeholder="Cari menu...">
+
+<select id="filterAdmin" onchange="renderAdmin()" 
+class="w-full bg-slate-100 rounded-2xl p-4 text-sm font-bold outline-none mb-3">
+  <option value="SEMUA">Semua Menu</option>
+  <option value="AKTIF">Aktif</option>
+  <option value="NONAKTIF">Nonaktif</option>
+  <option value="BEST">Best Seller</option>
+  <option value="PROMO">Promo</option>
+</select>
+
+<div id="list-menu" class="space-y-3"></div>
+    </div>
+  </section>
+  </div>
+  <script src="common.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
+

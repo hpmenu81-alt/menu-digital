@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Happy Puppy Samarinda</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        .bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 74px;
+  background: #ffffff;
+  z-index: 60;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1px solid #f1f5f9;
+  box-shadow: 0 -8px 28px rgba(15,23,42,0.08);
+}
+
+.bottom-nav button {
+  font-size: 10px;
+  font-weight: 900;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.bottom-nav button.active {
+  color: #f97316;
+}
+
+.bottom-nav span {
+  font-size: 22px;
+}
+        .cart-bounce {
+    animation: cartBounce 0.35s ease;
+}
+
+@keyframes cartBounce {
+    0% { transform: translateX(-50%) scale(1); }
+    50% { transform: translateX(-50%) scale(1.04); }
+    100% { transform: translateX(-50%) scale(1); }
+}
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        
+        body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    scroll-behavior: smooth;
+
+    background: #fff4e8;
+}
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .active-tab { 
+            
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white; 
+            border-radius: 9999px;
+            box-shadow:
+0 6px 16px rgba(249,115,22,0.28),
+0 0 24px rgba(249,115,22,0.18);
+            border: transparent !important;
+        }
+        
+        #layar-hitam, #layar-bantuan, #notif-sukses {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.85);
+    z-index: 9999;
+    align-items: stretch;
+    overflow: hidden;
+}
+        #layar-hitam.tampil, #layar-bantuan.tampil, #notif-sukses.tampil { display: flex; }
+        
+        .konten-putih {
+    position: relative;
+    background: white;
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding: 18px;
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+        #layar-hitam.tampil .konten-putih, #layar-bantuan.tampil .konten-putih, #notif-sukses.tampil .konten-putih { transform: translateY(0); }
+        
+        #wifi-activation-bar { 
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); 
+            overflow: hidden; 
+        }
+
+        @keyframes pulse-orange {
+            0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+        }
+        .animate-order { animation: pulse-orange 3s infinite; }
+        
+        
+
+.menu-card {
+    transition: transform 0.2s ease;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 4px 10px rgba(15,23,42,0.06);
+
+    border: 1px solid #f3f4f6;
+}
+.menu-card:active {
+    transform: scale(0.985);
+}
+        .toast-show {
+    display: flex !important;
+    animation: toastPop 1.2s ease forwards;
+}
+
+@keyframes toastPop {
+    0% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
+    15% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    80% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -20px) scale(0.95); }
+}
+        .badge-hot {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+
+    background: linear-gradient(135deg,#ef4444,#f97316);
+
+    color: white;
+    font-size: 8px;
+    font-weight: 900;
+
+    padding: 3px 10px;
+    border-radius: 999px;
+
+    z-index: 10;
+
+    box-shadow:
+        0 4px 10px rgba(239,68,68,0.35),
+        0 0 20px rgba(249,115,22,0.2);
+}
+        .menu-image {
+    transition: transform 0.4s ease;
+}
+
+.menu-card:active .menu-image {
+    transform: scale(0.97);
+}
+    </style>
+</head>
+<body class="pb-56 text-slate-900 w-full">
+<div id="toast-add" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2 rounded-full shadow-2xl z-[99999] hidden items-center gap-2 text-[11px] font-black uppercase tracking-wider border border-white/10">
+    <span>✅</span>
+    <span id="toast-text">Menu ditambahkan</span>
+</div>
+    <div id="wifi-activation-bar" class="hidden bg-slate-900 p-4 border-b border-white/10">
+        <div class="flex justify-between items-center mb-2">
+            <span id="wifi-status-text" class="text-[10px] font-black text-orange-500 uppercase tracking-widest italic">Inisialisasi...</span>
+            <span id="wifi-percentage" class="text-[10px] font-black text-white italic">0%</span>
+        </div>
+        <div class="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+            <div id="wifi-progress-line" class="h-full bg-orange-500 w-0 transition-transform duration-200 active:scale-[0.98]"></div>
+        </div>
+    </div>
+
+    <div id="top-header" class="bg-slate-950 relative z-50 px-5 py-4 shadow-xl overflow-hidden">
+    <img src="https://lh3.googleusercontent.com/u/0/d/1VMXIBZSme4siqoboYqcH7hk9UNW1RT7s?w=800"
+        class="absolute inset-0 w-full h-full object-cover opacity-20">
+    <div class="absolute inset-0 bg-gradient-to-r from-black via-slate-950/90 to-slate-900/70"></div>
+
+    <div class="relative z-10 flex items-center justify-between gap-3 min-h-[74px]">
+        <div class="min-w-0">
+            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-orange-400 mb-1">
+                Happy Puppy
+            </p>
+            <h1 class="text-[24px] font-black uppercase leading-[1.02] tracking-tight text-white">
+                Panjaitan
+            </h1>
+        </div>
+
+        <div id="info-room-header"
+            class="shrink-0 bg-white/10 border border-white/20 px-4 py-2.5 rounded-[22px] text-[11px] font-black uppercase text-white leading-tight">
+            📍 Room
+        </div>
+    </div>
+</div>
+
+<div class="px-3 py-2"><label for="input-room-final" class="text-xs font-bold">Room karaoke</label><select id="input-room-final" onchange="cekRoomStatus()" class="w-full bg-slate-50 border-none p-3.5 rounded-[20px] font-black text-slate-800 outline-none text-[10px] tracking-wider shadow-inner appearance-none">
+                        <option value="" disabled selected>Pilih Room Karaoke 🎤</option>
+                        <optgroup label="LANTAI 1"><option value="101">101</option><option value="102">102</option><option value="103">103</option><option value="104">104</option><option value="105">105</option><option value="106">106</option><option value="107">107</option><option value="108">108</option><option value="110">110</option></optgroup>
+                        <optgroup label="LANTAI 2"><option value="201">201</option><option value="203">203</option><option value="204">204</option><option value="205">205</option><option value="206">206</option><option value="207">207</option><option value="208">208</option><option value="209">209</option><option value="210">210</option><option value="211">211</option></optgroup>
+                        <optgroup label="LANTAI 3"><option value="301">301</option><option value="302">302</option><option value="303">303</option><option value="304">304</option><option value="305">305</option><option value="306">306</option><option value="307">307</option><option value="308">308</option></optgroup>
+                        <option value="LOBBY">LOBBY</option>
+                    </select></div>
+<div id="widget-pesanan-saya" class="mx-2 mt-2 hidden animate-fadeIn">
+    <div class="bg-slate-900/70 border border-orange-500/40 rounded-[24px] p-4">
+        <div class="flex justify-between items-center mb-2">
+            <span class="text-[11px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-2">
+                🔔 Keranjang
+            </span>
+            <span id="jumlah-riwayat" class="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">0</span>
+        </div>
+        <div id="list-riwayat-luar" class="flex gap-2 overflow-x-auto no-scrollbar"></div>
+    </div>
+</div>
+
+    <div id="section-best-seller" class="px-2 pt-1 pb-0 bg-[#fff4e8]">
+        <h2 class="text-[12px] font-black uppercase text-orange-500 mb-0 tracking-[0.08em] flex items-center gap-2 italic">
+            <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span> ⭐ Menu Favorit
+        </h2>
+        <div id="container-best-seller" class="flex gap-2 overflow-x-auto no-scrollbar pb-1"></div>
+    </div>
+
+    <div id="sticky-order-bar" class="sticky top-0 z-40 bg-[#fff4e8]/95 px-2 pt-2 pb-1">
+
+    <div class="bg-[#fffaf5] border border-orange-100 rounded-[28px] flex items-center px-2 mb-1 shadow-sm">
+        <span class="mr-2">🔍</span>
+        <input type="text" id="input-cari-sticky" oninput="cekInputCariSticky()" placeholder="Cari menu favorit..." class="w-full py-2 bg-transparent text-sm outline-none font-medium text-slate-700 placeholder:text-slate-400">
+        <button id="btn-reset-cari-sticky" onclick="resetCariSticky()" class="hidden text-slate-400 p-2 text-lg">✕</button>
+    </div>
+
+    <div class="overflow-x-auto no-scrollbar flex whitespace-nowrap gap-2" id="tabs-kategori"></div>
+
+</div>
+
+    <div class="px-2 pt-0 pb-2 w-full bg-[#fff4e8] relative z-10">
+    <p id="judul-kategori-menu" class="text-[#6b3a1f] text-[12px] font-black uppercase tracking-[0.10em] mb-1">
+    ☰ SEMUA MENU
+</p>
+        <div id="container-menu" class="space-y-1 text-center py-1 text-slate-300 font-black uppercase">
+    Memuat Menu...
+</div>
+    </div>
+
+    <div id="bar-keranjang" class="fixed bottom-20 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-slate-950 text-white p-4 rounded-[24px] shadow-2xl flex justify-between items-center hidden z-50 border border-white/10">
+    <div id="ringkasan-singkat"></div>
+    <button onclick="munculkanPopup(event)" class="bg-gradient-to-r from-[#ff7b00] to-[#ff5e00] shadow-[0_0_20px_rgba(249,115,22,0.35)] px-5 py-4 rounded-[20px] font-black text-[11px] uppercase animate-order tracking-wider">
+        Lihat Keranjang →
+    </button>
+</div>
+
+    <div id="layar-hitam" onclick="hilangkanPopup()">
+    <div class="konten-putih !p-5" onclick="event.stopPropagation()">
+        <div class="w-10 h-1 bg-slate-100 rounded-full mx-auto mb-4"></div>
+        
+        <div class="flex justify-between items-center mb-4 px-1">
+    <div class="flex flex-col">
+        <h2 class="font-black text-xl text-slate-800 uppercase italic tracking-tighter leading-none">Keranjang</h2>
+        <span class="text-[9px] font-bold text-slate-400 uppercase italic mt-1">Happy Puppy Panjaitan</span>
+    </div>
+    <div class="flex items-center gap-2">
+        <button onclick="resetKeranjang()" class="text-orange-500 text-[9px] font-black uppercase bg-orange-50 px-3 py-2 rounded-xl italic">Reset</button>
+        <button onclick="hilangkanPopup()" class="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-500 rounded-full font-bold text-sm">✕</button>
+    </div>
+</div>
+        
+        <div id="list-checkout" class="overflow-y-auto mb-2 flex-1 pr-1 pb-8">
+            </div>
+        
+        <div class="mt-2 pt-3 border-t border-slate-50">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="flex-[1.5] relative">
+                    <p class="text-xs">Room dipilih di bagian atas halaman.</p>
+                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-300">▼</div>
+                </div>
+
+                <div class="flex-1 text-right">
+                    <p class="text-[13px] font-black text-slate-400 uppercase italic leading-none mb-1">Total Bayar</p>
+                    <p id="harga-akhir" class="text-lg font-black text-orange-600 italic leading-none">Rp 0</p>
+                </div>
+            </div>
+
+            <button type="button" id="btn-kirim-wa" onclick="jalankanKirimWA()" disabled class="w-full bg-slate-200 text-slate-400 py-4 rounded-[22px] font-black text-[11px] uppercase tracking-[0.1em] transition-transform duration-200 active:scale-[0.98] shadow-sm">
+                Pilih Room Dulu 🎤
+            </button>
+            
+            <span id="subtotal-angka" class="hidden">Rp 0</span>
+        </div>
+    </div>
+</div>
+
+                
+
+    <div id="notif-sukses" onclick="tutupNotifSelesai()">
+        <div class="konten-putih items-center text-center pb-12" onclick="event.stopPropagation()">
+            <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner">✓</div>
+            <h2 class="text-2xl font-black text-slate-800 uppercase italic mb-2 tracking-tighter">Lanjutkan di WhatsApp</h2>
+            <p class="text-slate-500 text-sm px-6 leading-relaxed mb-8 font-medium italic">Tekan Kirim di WhatsApp dan tunggu konfirmasi staf.</p>
+            <button onclick="tutupNotifSelesai()" class="w-full bg-slate-900 text-white py-5 rounded-[20px] font-black text-sm uppercase italic tracking-widest">Siap, Terima Kasih!</button>
+        </div>
+    </div>
+
+    <div id="layar-bantuan" onclick="tutupBantuan()">
+        <div class="konten-putih" onclick="event.stopPropagation()">
+            <button onclick="tutupBantuan()" class="absolute top-5 right-6 text-slate-300 text-2xl font-bold p-2">✕</button>
+            <h2 class="font-black text-xl text-slate-800 mb-6 uppercase italic text-center">Layanan Room</h2>
+            <div class="space-y-4 mb-8">
+                <button onclick="kirimBantuan('Minta Bill')" class="w-full p-5 bg-slate-50 border border-slate-100 rounded-[20px] text-left flex justify-between items-center font-black text-slate-700 italic uppercase">Minta Bill 🧾</button>
+                <button onclick="kirimBantuan('Panggil Pelayan')" class="w-full p-5 bg-slate-50 border border-slate-100 rounded-[20px] text-left flex justify-between items-center font-black text-slate-700 italic uppercase">Panggil Staff 🙋‍♂️</button>
+            </div>
+        </div>
+    </div>
+    <div class="bottom-nav">
+  <button id="nav-beranda" class="active" onclick="setActiveNav('beranda'); gantiKat('SEMUA'); window.scrollTo({top:0, behavior:'smooth'})">
+    <span>⌂</span>
+    Beranda
+  </button>
+
+  <button id="nav-menu" onclick="setActiveNav('menu'); gantiKat('SEMUA'); document.getElementById('sticky-order-bar').scrollIntoView({behavior:'smooth'})">
+    <span>🍽️</span>
+    Menu
+  </button>
+
+  <button id="nav-paket" onclick="setActiveNav('paket'); gantiKat('PAKET'); document.getElementById('sticky-order-bar').scrollIntoView({behavior:'smooth'})">
+    <span>🎁</span>
+    Paket
+  </button>
+
+  <button id="nav-pesanan" onclick="bukaRiwayatPesanan()">
+    <span>🧾</span>
+    Keranjang
+</button>
+
+  <button id="nav-bantuan" onclick="setActiveNav('bantuan'); bukaBantuan()">
+    <span>🙋</span>
+    Bantuan
+  </button>
+</div>
+
+    <script src="common.js"></script>
+    <script src="customer.js"></script>
+</body>
+</html>
+
