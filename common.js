@@ -1,5 +1,5 @@
 "use strict";
-const client = supabase.createClient("https://sytpztzuohaxseqdcnwa.supabase.co", "sb_publishable_uEpaY5r4PqrbW7Gw-QMumQ_wIKrP3Cg");
+const client = supabase.createClient("https://ppicpdjxsvylqlommdwd.supabase.co", "sb_publishable_Asosa0KCZpmIuPBZSQuTZg_Q8t_VwpK");
 const $ = id => document.getElementById(id);
 const rupiah = value => "Rp " + Number(value).toLocaleString("id-ID");
 function el(tag, text, className = "") {
@@ -45,3 +45,4 @@ async function readMenus(activeOnly = false) {
     if (data.length < 500) return rows;
   }
 }
+
