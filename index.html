@@ -165,6 +165,7 @@
     transform: scale(0.97);
 }
     </style>
+<link rel="stylesheet" href="promotions.css">
 </head>
 <body class="pb-56 text-slate-900 w-full">
 <div id="toast-add" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2 rounded-full shadow-2xl z-[99999] hidden items-center gap-2 text-[11px] font-black uppercase tracking-wider border border-white/10">
@@ -203,6 +204,8 @@
     </div>
 </div>
 
+<section id="promotion-banners" class="promo-strip" hidden aria-label="Promo pilihan"></section>
+<div id="promotion-load-status" class="mx-3" role="status" aria-live="polite"></div>
 <section class="mx-3 mt-3 bg-white rounded-2xl p-3 text-sm space-y-2">
   <p id="store-address" class="whitespace-pre-line" hidden></p>
   <p id="store-hours" class="whitespace-pre-line" hidden></p>
@@ -353,6 +356,7 @@
 
     <script src="common.js"></script>
     <script src="settings.js"></script>
+    <script src="promotions.js"></script>
     <script src="customer.js"></script>
 </body>
 </html>

@@ -1,5 +1,17 @@
 # Menu Happy Puppy Panjaitan
 
+## Banner, diskon, dan bundling
+
+Migrasi `supabase/migrations/20260916124509_menu_promotions.sql` sudah diterapkan ke proyek produksi pada 16 September 2026. Untuk instalasi baru, jalankan setelah migrasi keamanan dan pengaturan toko.
+
+Admin → **Promo** → **Promo baru**. Isi judul, pilih menu, lalu tentukan diskon persen/rupiah atau harga satu paket beserta jumlah setiap menu. Centang **Aktifkan promo** dan **Tampilkan di banner atas**, lalu simpan. Banner memakai foto menu pilihan. Tidak ada promo contoh yang diaktifkan otomatis.
+
+Harga normal tetap tersimpan; pelanggan melihat harga normal tercoret dan harga promo. Diskon tidak ditumpuk: potongan terbaik per menu digunakan. Bundling memakai harga paket sendiri tanpa diskon tambahan; harga normalnya adalah total harga dasar isi paket. Diskon persen dibulatkan ke rupiah terdekat. Paket tidak tersedia jika salah satu menu nonaktif/hilang atau harga paket tidak lagi lebih rendah dari total normal. Perubahan terlihat setelah halaman pelanggan dimuat ulang. Harga dan ketersediaan diperiksa kembali sebelum pindah ke WhatsApp; perubahan meminta pelanggan meninjau keranjang. WhatsApp dibuka pada tab yang sama untuk menghindari pemblokiran pop-up setelah pemeriksaan harga.
+
+Hanya admin terdaftar yang dapat membuat/mengubah promo; pengunjung hanya dapat membaca promo aktif. Validasi database menolak referensi menu tidak valid, jumlah tidak valid, dan potongan yang menghasilkan harga nol/negatif. Penyimpanan promo memakai versi untuk mencegah penimpaan edit bersamaan. Pesanan tetap berupa draf WhatsApp dan perlu konfirmasi staf.
+
+Tes: `node --test tests/*.test.cjs`, `node tests/settings.browser.cjs`, dan `node tests/promotions.browser.cjs` (Playwright dan Edge). Tes browser memakai data simulasi. Uji akses database dilakukan dalam transaksi yang di-rollback.
+
 ## Fitur pengaturan toko dan urutan menu
 
 Sebelum mengunggah versi ini, jalankan **hanya migrasi tambahan**

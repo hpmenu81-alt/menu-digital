@@ -37,7 +37,7 @@ function editMenu(menu) {
 function setBusy(value) {
   busy = value;
   $("admin-content").querySelectorAll("input,textarea,select,button").forEach(node => { node.disabled = value; });
-  if (!value) { $("settings-save").disabled = !editorLoaded; renderOrders(); }
+  if (!value) { $("settings-save").disabled = !editorLoaded; renderOrders(); $("promotion-save").disabled = !promotionLoaded; }
 }
 async function requireAdmin() {
   const { data, error } = await client.rpc("is_menu_admin");
@@ -111,14 +111,17 @@ function showTab(tab) {
   if (busy) return;
   $("panelForm").classList.toggle("hidden", tab !== "form");
   $("panelList").classList.toggle("hidden", tab !== "list");
+  $("panelPromotions").classList.toggle("hidden", tab !== "promotions");
   $("panelSettings").classList.toggle("hidden", tab !== "settings");
-  for (const name of ["Form", "List", "Settings"]) $("tab" + name).className = (name.toLowerCase() === tab ? "bg-orange-500 text-white" : "bg-slate-200 text-slate-700") + " rounded-2xl py-3 font-black text-xs uppercase";
+  for (const name of ["Form", "List", "Settings", "Promotions"]) $("tab" + name).className = (name.toLowerCase() === tab ? "bg-orange-500 text-white" : "bg-slate-200 text-slate-700") + " rounded-2xl py-3 font-black text-xs uppercase";
   if (tab === "list") loadMenu();
   if (tab === "settings") openSettings();
+  if (tab === "promotions") openPromotions();
 }
 async function checkSession(session) {
   const version = ++authVersion;
   resetSettingsEditor();
+  resetPromotionEditor();
   authorized = false;
   ++loadVersion;
   menus = [];
