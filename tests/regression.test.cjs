@@ -41,3 +41,4 @@ test("menu pagination keeps records beyond the first page and requests only acti
   const result = await vm.runInContext("readMenus(true)", ctx);
   assert.equal(result.length, 502); assert.equal(requests, 2); assert.equal(activeFilters, 2);
 });
+
