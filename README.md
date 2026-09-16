@@ -1,5 +1,37 @@
 # Menu Happy Puppy Panjaitan
 
+## Fitur pengaturan toko dan urutan menu
+
+Sebelum mengunggah versi ini, jalankan **hanya migrasi tambahan**
+`supabase/migrations/202609160001_menu_settings.sql` melalui SQL Editor.
+Migrasi ini menambahkan satu tabel pengaturan; data menu dan foto tetap dipakai.
+Jangan menjalankan ulang SQL pemulihan backup.
+
+Setelah migrasi berhasil, unggah file situs versi ini. Masuk ke admin, buka tab
+**Pengaturan**, lalu isi nama toko, WhatsApp, alamat, jam buka, dan informasi
+tambahan. Gunakan tombol naik/turun untuk kategori dan menu dalam kategori,
+lalu tekan **Simpan pengaturan & urutan**. Urutan ini berlaku di katalog,
+tab kategori, daftar favorit, dan daftar admin. Menu/kategori baru yang belum
+diurutkan ditempatkan setelah yang sudah diatur.
+
+Nomor lokal 08 dinormalisasi menjadi 628; nomor internasional harus memakai
+kode negara. Pesanan, minta bill, dan panggil staf menggunakan nomor yang sama.
+Jam buka adalah teks informasi, bukan jadwal penutupan otomatis.
+Perubahan terlihat pada pelanggan setelah halaman dimuat ulang. Jika pengaturan
+gagal dimuat, katalog tetap ditampilkan tetapi pengiriman WhatsApp dinonaktifkan
+agar tidak mengirim ke nomor lama. Tombol Coba lagi memuat ulang pengaturan.
+
+Pengaturan hanya dapat ditulis admin terdaftar. Penyimpanan menggunakan nomor
+versi; jika admin lain lebih dulu menyimpan, muat ulang pengaturan sebelum
+mencoba lagi. Tombol muat ulang meminta konfirmasi jika ada perubahan lokal.
+
+Uji fitur: `node --test tests/regression.test.cjs tests/settings.test.cjs`.
+Pengujian browser opsional: instal Playwright, kemudian jalankan
+`node tests/settings.browser.cjs` (default Edge; BROWSER_CHANNEL dapat diatur).
+Tes browser menggunakan data simulasi, tidak menulis database produksi.
+SQL perlu diuji pada Supabase: pengunjung/akun biasa hanya membaca pengaturan,
+admin dapat memperbarui pengaturan, dan data menu lama tetap utuh.
+
 Halaman statis pelanggan (index.html) dan admin (admin.html), menggunakan Supabase.
 Katalog dipulihkan dari riwayat commit a964a66c, dengan renderer DOM baru dan keranjang berdasarkan ID menu. Nomor WhatsApp mengikuti konfigurasi lama: 6281255763976.
 

@@ -189,10 +189,10 @@
     <div class="relative z-10 flex items-center justify-between gap-3 min-h-[74px]">
         <div class="min-w-0">
             <p class="text-[11px] font-black uppercase tracking-[0.18em] text-orange-400 mb-1">
-                Happy Puppy
+                MENU DIGITAL
             </p>
-            <h1 class="text-[24px] font-black uppercase leading-[1.02] tracking-tight text-white">
-                Panjaitan
+            <h1 data-store-name class="text-[24px] font-black uppercase leading-[1.02] tracking-tight text-white">
+                Happy Puppy Panjaitan
             </h1>
         </div>
 
@@ -203,6 +203,12 @@
     </div>
 </div>
 
+<section class="mx-3 mt-3 bg-white rounded-2xl p-3 text-sm space-y-2">
+  <p id="store-address" class="whitespace-pre-line" hidden></p>
+  <p id="store-hours" class="whitespace-pre-line" hidden></p>
+  <p id="store-information" class="whitespace-pre-line" hidden></p>
+  <div id="store-load-status" role="status" aria-live="polite">Memuat informasi toko...</div>
+</section>
 <div class="px-3 py-2"><label for="input-room-final" class="text-xs font-bold">Room karaoke</label><select id="input-room-final" onchange="cekRoomStatus()" class="w-full bg-slate-50 border-none p-3.5 rounded-[20px] font-black text-slate-800 outline-none text-[10px] tracking-wider shadow-inner appearance-none">
                         <option value="" disabled selected>Pilih Room Karaoke 🎤</option>
                         <optgroup label="LANTAI 1"><option value="101">101</option><option value="102">102</option><option value="103">103</option><option value="104">104</option><option value="105">105</option><option value="106">106</option><option value="107">107</option><option value="108">108</option><option value="110">110</option></optgroup>
@@ -264,7 +270,7 @@
         <div class="flex justify-between items-center mb-4 px-1">
     <div class="flex flex-col">
         <h2 class="font-black text-xl text-slate-800 uppercase italic tracking-tighter leading-none">Keranjang</h2>
-        <span class="text-[9px] font-bold text-slate-400 uppercase italic mt-1">Happy Puppy Panjaitan</span>
+        <span data-store-name class="text-[9px] font-bold text-slate-400 uppercase italic mt-1">Happy Puppy Panjaitan</span>
     </div>
     <div class="flex items-center gap-2">
         <button onclick="resetKeranjang()" class="text-orange-500 text-[9px] font-black uppercase bg-orange-50 px-3 py-2 rounded-xl italic">Reset</button>
@@ -346,6 +352,7 @@
 </div>
 
     <script src="common.js"></script>
+    <script src="settings.js"></script>
     <script src="customer.js"></script>
 </body>
 </html>

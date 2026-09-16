@@ -1,5 +1,4 @@
 "use strict";
-const WA_NUMBER = "6281255763976";
 let databaseMenu = [], katAktif = "SEMUA", queryCari = "";
 const cart = new Map();
 function room() { return $("input-room-final").value; }
@@ -10,12 +9,12 @@ function deteksiRoom() {
 }
 function cekRoomStatus() {
   $("info-room-header").textContent = room() ? "📍 Room: " + room() : "📍 Pilih Room";
-  $("btn-kirim-wa").disabled = !room() || cart.size === 0;
+  $("btn-kirim-wa").disabled = !storeSettingsReady || !room() || cart.size === 0;
   $("btn-kirim-wa").textContent = room() ? "Lanjutkan ke WhatsApp" : "Pilih Room Dulu 🎤";
 }
 async function ambilData() {
   try {
-    databaseMenu = (await readMenus(true)).filter(m => Number.isSafeInteger(Number(m.harga)) && Number(m.harga) > 0);
+    databaseMenu = orderedMenus((await readMenus(true)).filter(m => Number.isSafeInteger(Number(m.harga)) && Number(m.harga) > 0));
     renderTabs(); renderMenu(); renderBestSeller();
   } catch (error) {
     $("container-menu").replaceChildren(el("p", "Gagal memuat menu. Silakan coba lagi."), action("Coba lagi", ambilData));
@@ -97,9 +96,9 @@ function munculkanPopup(event) {
 }
 function hilangkanPopup() { $("layar-hitam").classList.remove("tampil"); document.body.style.overflow = ""; }
 function resetKeranjang() { if (confirm("Hapus semua item di keranjang?")) { cart.clear(); hilangkanPopup(); updateBar(); renderMenu(); renderBestSeller(); } }
-function whatsappURL(message) { return "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(message); }
+function whatsappURL(message) { return "https://wa.me/" + storeSettings.whatsapp + "?text=" + encodeURIComponent(message); }
 function jalankanKirimWA() {
-  if (!room() || !cart.size) return;
+  if (!storeSettingsReady || !room() || !cart.size) return;
   const lines = ["Halo, saya dari ROOM " + room() + " ingin memesan:", ""];
   for (const item of cart.values()) {
     lines.push("• " + item.nama + " (" + item.qty + "x)");
@@ -113,8 +112,9 @@ function jalankanKirimWA() {
 function bukaBantuan() { $("layar-bantuan").classList.add("tampil"); }
 function tutupBantuan() { $("layar-bantuan").classList.remove("tampil"); }
 function kirimBantuan(request) {
+  if (!storeSettingsReady) { alert("Informasi toko belum berhasil dimuat. Silakan muat ulang halaman."); return; }
   if (!room()) { alert("Pilih room terlebih dahulu di bagian atas halaman."); return; }
-  window.open(whatsappURL("Halo Happy Puppy Samarinda, saya dari ROOM " + room() + ". " + request + "."), "_blank", "noopener,noreferrer");
+  window.open(whatsappURL("Halo " + storeSettings.store_name + ", saya dari ROOM " + room() + ". " + request + "."), "_blank", "noopener,noreferrer");
   tutupBantuan();
 }
 function setActiveNav(name) {
@@ -126,5 +126,18 @@ function bukaRiwayatPesanan() {
 }
 function tutupNotifSelesai() { $("notif-sukses").classList.remove("tampil"); }
 document.addEventListener("keydown", event => { if (event.key === "Escape") { hilangkanPopup(); tutupBantuan(); } });
-deteksiRoom();
-ambilData();
+async function startCustomer() {
+  storeSettingsReady = false;
+  deteksiRoom();
+  try {
+    storeSettings = await readStoreSettings();
+    storeSettingsReady = true;
+    applyStoreInformation();
+    $("store-load-status").replaceChildren();
+  } catch (error) {
+    $("store-load-status").replaceChildren(el("p","Informasi toko belum bisa dimuat. Pemesanan sementara tidak tersedia."), action("Coba lagi",startCustomer));
+  }
+  cekRoomStatus();
+  await ambilData();
+}
+startCustomer();

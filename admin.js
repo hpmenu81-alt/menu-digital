@@ -37,6 +37,7 @@ function editMenu(menu) {
 function setBusy(value) {
   busy = value;
   $("admin-content").querySelectorAll("input,textarea,select,button").forEach(node => { node.disabled = value; });
+  if (!value) { $("settings-save").disabled = !editorLoaded; renderOrders(); }
 }
 async function requireAdmin() {
   const { data, error } = await client.rpc("is_menu_admin");
@@ -86,7 +87,7 @@ async function toggleField(id, field, value) {
 }
 function renderAdmin() {
   const keyword = $("searchAdmin").value.toLowerCase(), filter = $("filterAdmin").value;
-  const result = menus.filter(m => [m.nama, m.kategori].some(v => String(v || "").toLowerCase().includes(keyword)) && ({ SEMUA: true, AKTIF: !!m.aktif, NONAKTIF: !m.aktif, BEST: !!m.best_seller, PROMO: !!m.promo })[filter]);
+  const result = orderedMenus(menus).filter(m => [m.nama, m.kategori].some(v => String(v || "").toLowerCase().includes(keyword)) && ({ SEMUA: true, AKTIF: !!m.aktif, NONAKTIF: !m.aktif, BEST: !!m.best_seller, PROMO: !!m.promo })[filter]);
   $("list-menu").replaceChildren();
   for (const menu of result) {
     const card = el("article", "", "bg-slate-50 rounded-2xl p-3 border space-y-2");
@@ -103,18 +104,21 @@ async function loadMenu() {
   if (!authorized) return;
   const version = ++loadVersion;
   $("list-menu").textContent = "Memuat menu...";
-  try { const rows = await readMenus(); if (authorized && version === loadVersion) { menus = rows; renderAdmin(); } }
+  try { const rows = await readMenus(); if (authorized && version === loadVersion) { menus = rows; renderAdmin(); syncOrderMenus(); } }
   catch (error) { if (version === loadVersion) $("list-menu").textContent = "Gagal memuat menu: " + error.message; }
 }
 function showTab(tab) {
   if (busy) return;
   $("panelForm").classList.toggle("hidden", tab !== "form");
   $("panelList").classList.toggle("hidden", tab !== "list");
-  for (const name of ["Form", "List"]) $("tab" + name).className = (name.toLowerCase() === tab ? "bg-orange-500 text-white" : "bg-slate-200 text-slate-700") + " rounded-2xl py-3 font-black text-xs uppercase";
+  $("panelSettings").classList.toggle("hidden", tab !== "settings");
+  for (const name of ["Form", "List", "Settings"]) $("tab" + name).className = (name.toLowerCase() === tab ? "bg-orange-500 text-white" : "bg-slate-200 text-slate-700") + " rounded-2xl py-3 font-black text-xs uppercase";
   if (tab === "list") loadMenu();
+  if (tab === "settings") openSettings();
 }
 async function checkSession(session) {
   const version = ++authVersion;
+  resetSettingsEditor();
   authorized = false;
   ++loadVersion;
   menus = [];
@@ -149,5 +153,8 @@ $("logout").addEventListener("click", async () => {
   if (error) statusMessage(error.message);
   else { resetForm(); await checkSession(null); }
 });
-client.auth.onAuthStateChange((_event, session) => { setTimeout(() => checkSession(session), 0); });
+client.auth.onAuthStateChange((event, session) => {
+  if (event === "TOKEN_REFRESHED" && authorized) return;
+  setTimeout(() => checkSession(session), 0);
+});
 client.auth.getSession().then(({ data, error }) => error ? statusMessage(error.message) : checkSession(data.session)).catch(error => statusMessage(error.message));
