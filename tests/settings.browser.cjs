@@ -30,7 +30,7 @@ let saved={id:1,version:0,store_name:"Happy Puppy Panjaitan",whatsapp:"628125576
          let update=null,version;
          return {select(){return this},order(){return this},eq(key,value){if(key==="version")version=value;return this},
            update(payload){update=payload;return this},
-           async range(){return {data:window.mockRows}},
+           async range(){return {data:table==="menu_promotions"?[]:window.mockRows}},
            async single(){
              if(table!=="menu_settings")return {data:{id:"a"}};
              if(window.failSettings)return {error:{message:"Unavailable"}};
@@ -44,7 +44,8 @@ let saved={id:1,version:0,store_name:"Happy Puppy Panjaitan",whatsapp:"628125576
        }
      })};
    },{rows,saved,admin,fail});
-   for(const file of ["common.js","settings.js",...(admin?["admin-settings.js","admin.js"]:["customer.js"])]) await page.addScriptTag({path:path.join(root,file)});
+   for(const file of ["common.js","settings.js","promotions.js",...(admin?["admin-promotions.js","admin-settings.js","admin.js"]:["customer.js"])]) await page.addScriptTag({path:path.join(root,file)});
+   if(!admin)await page.evaluate(()=>{openOrderWhatsApp=url=>window.opened.push(url);});
    if(admin)await page.waitForFunction(()=>document.getElementById("admin-content").hidden===false);
    else await page.waitForFunction(()=>document.querySelectorAll("#container-menu article").length===3);
  }
