@@ -1,5 +1,14 @@
 # Menu Happy Puppy Panjaitan
 
+## Perbaikan prioritas 1 — 18 September 2026
+
+- Keranjang, jumlah, catatan dan room tersimpan di perangkat selama 12 jam sejak pembaruan terakhir. Harga tidak diambil dari penyimpanan perangkat; menu serta harga terbaru digunakan saat pemulihan. Keranjang lama dibersihkan jika QR mengarah ke room berbeda. Jika penyimpanan perangkat diblokir, situs tetap dapat digunakan dengan pemberitahuan.
+- Room dapat dipilih langsung di keranjang dan tersinkron dengan pemilih di bagian atas.
+- Kelola Menu menampilkan harga normal/promo yang sama dengan katalog. Filter **Promo berjalan** mencakup diskon dan bundling yang sedang berlaku. Edit menu tetap menggunakan harga dasar. Label promo lama tidak lagi menjadi sumber promo pelanggan; pengaturan dilakukan di tab Promo.
+- Jadwal mulai/selesai promo menggunakan WITA (UTC+8), dengan waktu acuan server. Batas awal termasuk, batas akhir tidak termasuk. Kosong berarti tidak dibatasi pada sisi tersebut. Promo harus diaktifkan agar jadwal berlaku. Halaman yang terbuka memperbarui harga saat batas jadwal terlewati dan memeriksa kembali harga sebelum WhatsApp.
+
+Migrasi tambahan `supabase/migrations/20260918134526_promotion_schedule.sql` sudah diterapkan. Tidak perlu menjalankan ulang pemulihan data. Tes tambahan: `node tests/priority.browser.cjs` dan `node --test tests/priority.test.cjs`.
+
 ## Banner, diskon, dan bundling
 
 Migrasi `supabase/migrations/20260916124509_menu_promotions.sql` sudah diterapkan ke proyek produksi pada 16 September 2026. Untuk instalasi baru, jalankan setelah migrasi keamanan dan pengaturan toko.

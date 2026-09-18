@@ -24,7 +24,7 @@ async function openPromotions(force=false){
   finally{if(request===promotionRequest)$("promotion-save").disabled=!promotionLoaded;}
 }
 function promotionInput(){
-  return {title:$("promotion-title").value,description:$("promotion-description").value,kind:$("promotion-kind").value,discount_type:$("promotion-discount-type").value,discount_value:$("promotion-discount-value").value,bundle_price:$("promotion-bundle-price").value,active:$("promotion-active").checked,banner:$("promotion-banner").checked,items:Array.from(promotionSelection,([menu_id,quantity])=>({menu_id,quantity}))};
+  return {title:$("promotion-title").value,description:$("promotion-description").value,kind:$("promotion-kind").value,discount_type:$("promotion-discount-type").value,discount_value:$("promotion-discount-value").value,bundle_price:$("promotion-bundle-price").value,active:$("promotion-active").checked,banner:$("promotion-banner").checked,starts_at:fromWitaInput($("promotion-start").value),ends_at:fromWitaInput($("promotion-end").value),items:Array.from(promotionSelection,([menu_id,quantity])=>({menu_id,quantity}))};
 }
 function renderPromotionPicker(){
   const bundle=$("promotion-kind").value==="bundle",keyword=$("promotion-search").value.toLowerCase();
@@ -48,7 +48,7 @@ function previewPromotion(){
   if(!promotionSelection.size){node.textContent="Pilih menu untuk melihat perhitungan harga.";return;}
   try{
     const p=promotionPayload({...promotionInput(),title:$("promotion-title").value||"Pratinjau"},menus);
-    const offers=buildOfferCatalog(menus,[{...p,id:"preview",active:true}]);
+    const offers=buildOfferCatalog(menus,[{...p,id:"preview",active:true,starts_at:null,ends_at:null}]);
     const selected=p.kind==="bundle"?offers.filter(m=>m.is_bundle):offers.filter(m=>m.offer_id==="preview");
     for(const item of selected){const row=el("div",item.nama);row.append(priceDisplay(item));node.append(row);}
     if(!selected.length)node.textContent="Promo tidak tersedia: periksa menu aktif dan harga.";
@@ -59,12 +59,13 @@ function editPromotion(p){
   promotionEdit={id:p.id,version:p.version};promotionSelection=new Map(p.items.map(item=>[String(item.menu_id),item.quantity]));
   for(const [id,key] of [["title","title"],["description","description"],["kind","kind"],["discount-type","discount_type"],["discount-value","discount_value"],["bundle-price","bundle_price"]])$("promotion-"+id).value=p[key]??"";
   $("promotion-active").checked=p.active;$("promotion-banner").checked=p.banner;$("promotion-search").value="";
+  $("promotion-start").value=toWitaInput(p.starts_at);$("promotion-end").value=toWitaInput(p.ends_at);
   $("promotion-save").textContent="Simpan perubahan promo";promotionDirty=false;$("promotion-status").textContent="";renderPromotionPicker();
   $("promotion-form").scrollIntoView({behavior:"smooth"});
 }
 function renderPromotionList(){
   $("promotion-list").replaceChildren(...promotionRows.map(p=>{
-    const card=el("article","","promo-list-card");card.append(el("h3",p.title),el("p",(p.active?"Aktif":"Nonaktif")+" · "+(p.kind==="bundle"?"Bundling":"Diskon menu")+(p.banner?" · Banner ditampilkan":""),"promo-help"));
+    const card=el("article","","promo-list-card");card.append(el("h3",p.title),el("p",promotionStatus(p)+" · "+(p.kind==="bundle"?"Bundling":"Diskon menu")+(p.banner?" · Banner diaktifkan":""),"promo-help"),el("p",scheduleLabel(p),"promo-help"));
     card.append(el("p",p.items.map(i=>(i.quantity+"× "+(menus.find(m=>String(m.id)===String(i.menu_id))?.nama||"Menu tidak tersedia"))).join(", "),"promo-help"));
     card.append(action("Edit promo",()=>editPromotion(p)),action(p.active?"Nonaktifkan":"Aktifkan",()=>togglePromotion(p)));
     return card;
@@ -86,7 +87,7 @@ async function savePromotion(event){
     const data=await persistPromotion(payload,promotionEdit);
     if(!authorized||request!==promotionRequest)return;
     promotionRows=[data,...promotionRows.filter(p=>p.id!==data.id)];promotionEdit={id:data.id,version:data.version};promotionDirty=false;
-    renderPromotionList();$("promotion-save").textContent="Simpan perubahan promo";$("promotion-status").textContent="Promo berhasil disimpan. Muat ulang halaman pelanggan untuk melihat perubahan.";
+    renderPromotionList();adminPromotionRows=promotionRows;renderAdmin();$("promotion-save").textContent="Simpan perubahan promo";$("promotion-status").textContent="Promo berhasil disimpan. Muat ulang halaman pelanggan untuk melihat perubahan.";
   }catch(error){if(request===promotionRequest)$("promotion-status").textContent=error.message;}
   finally{setBusy(false);}
 }
@@ -96,7 +97,7 @@ async function togglePromotion(p){
     const payload=p.active?{active:false}:promotionPayload({...p,active:true},menus);setBusy(true);
     const data=await persistPromotion(payload,p);
     if(!authorized||request!==promotionRequest)return;
-    promotionRows=promotionRows.map(row=>row.id===data.id?data:row);renderPromotionList();
+    promotionRows=promotionRows.map(row=>row.id===data.id?data:row);adminPromotionRows=promotionRows;renderPromotionList();renderAdmin();
     $("promotion-status").textContent="Status promo berhasil diperbarui.";
     if(promotionEdit?.id===p.id&&!promotionDirty){promotionEdit={id:data.id,version:data.version};$("promotion-active").checked=data.active;}
   }catch(error){if(request===promotionRequest)$("promotion-status").textContent=error.message;}

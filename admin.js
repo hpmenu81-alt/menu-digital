@@ -1,5 +1,6 @@
 "use strict";
 let menus = [], authorized = false, busy = false, previewUrl = null, authVersion = 0, loadVersion = 0;
+let adminPromotionRows=[];
 function statusMessage(message) { $("status").textContent = message; }
 function clearPreview() {
   if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -87,14 +88,19 @@ async function toggleField(id, field, value) {
 }
 function renderAdmin() {
   const keyword = $("searchAdmin").value.toLowerCase(), filter = $("filterAdmin").value;
-  const result = orderedMenus(menus).filter(m => [m.nama, m.kategori].some(v => String(v || "").toLowerCase().includes(keyword)) && ({ SEMUA: true, AKTIF: !!m.aktif, NONAKTIF: !m.aktif, BEST: !!m.best_seller, PROMO: !!m.promo })[filter]);
+  const result = orderedMenus(buildOfferCatalog(menus,adminPromotionRows)).filter(m => [m.nama, m.kategori].some(v => String(v || "").toLowerCase().includes(keyword)) && ({ SEMUA: true, AKTIF: !!m.aktif, NONAKTIF: !m.aktif, BEST: !!m.best_seller, PROMO: !!m.offer_id })[filter]);
   $("list-menu").replaceChildren();
   for (const menu of result) {
     const card = el("article", "", "bg-slate-50 rounded-2xl p-3 border space-y-2");
-    card.append(menuImage(menu.foto_url, menu.nama), el("h3", menu.nama, "font-black"), el("p", rupiah(menu.harga)), el("p", menu.kategori), el("p", menu.aktif ? "🟢 AKTIF" : "🔴 NONAKTIF"));
+    card.append(menuImage(menu.foto_url, menu.nama), el("h3", menu.nama, "font-black"), priceDisplay(menu), el("p", menu.kategori), el("p", menu.aktif ? "🟢 AKTIF" : "🔴 NONAKTIF"));
+    if(menu.offer_id)card.append(el("p","Promo berjalan: "+menu.offer_title,"promo-help"));
+    if(menu.contents)card.append(el("p",menu.contents,"promo-help"));
     const controls = el("div", "", "grid grid-cols-2 gap-2");
-    controls.append(action("Edit", () => editMenu(menu)));
-    for (const [field, label] of [["aktif", "Aktif"], ["best_seller", "Best Seller"], ["promo", "Promo"]]) controls.append(action((menu[field] ? "Nonaktifkan " : "Aktifkan ") + label, () => toggleField(menu.id, field, !menu[field])));
+    if(!menu.is_bundle){
+      controls.append(action("Edit", () => editMenu(menus.find(m=>String(m.id)===String(menu.id)))));
+      for (const [field, label] of [["aktif", "Aktif"], ["best_seller", "Best Seller"]]) controls.append(action((menu[field] ? "Nonaktifkan " : "Aktifkan ") + label, () => toggleField(menu.id, field, !menu[field])));
+    }
+    controls.append(action("Kelola promo",()=>showTab("promotions")));
     card.append(controls);
     $("list-menu").append(card);
   }
@@ -104,7 +110,7 @@ async function loadMenu() {
   if (!authorized) return;
   const version = ++loadVersion;
   $("list-menu").textContent = "Memuat menu...";
-  try { const rows = await readMenus(); if (authorized && version === loadVersion) { menus = rows; renderAdmin(); syncOrderMenus(); } }
+  try { const [rows,promos] = await Promise.all([readMenus(),readPromotions()]); if (authorized && version === loadVersion) { menus = rows;adminPromotionRows=promos; renderAdmin(); syncOrderMenus(); } }
   catch (error) { if (version === loadVersion) $("list-menu").textContent = "Gagal memuat menu: " + error.message; }
 }
 function showTab(tab) {
@@ -125,6 +131,7 @@ async function checkSession(session) {
   authorized = false;
   ++loadVersion;
   menus = [];
+  adminPromotionRows=[];
   $("list-menu").replaceChildren();
   $("admin-content").hidden = true;
   $("login-panel").hidden = false;

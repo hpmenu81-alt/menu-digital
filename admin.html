@@ -6,7 +6,7 @@
   <title>Admin Menu HP103</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="promotions.css">
+  <link rel="stylesheet" href="promotions.css?v=20260918">
 </head>
 
 <body class="bg-orange-50 min-h-screen p-4 font-sans">
@@ -67,8 +67,8 @@ placeholder="Kategori (FOOD, MINUMAN, PAKET, dll)">
 </label>
 
 <label class="flex items-center gap-2 text-sm font-bold">
-  <input id="promo" type="checkbox">
-  Promo
+  <input id="promo" type="checkbox" hidden>
+  <span class="text-xs text-slate-500">Diskon dan banner diatur melalui tab Promo.</span>
 </label>
       <button onclick="simpanMenu()" id="btn-simpan" class="w-full bg-orange-500 text-white rounded-2xl py-4 font-black uppercase">
         Simpan Menu
@@ -94,7 +94,7 @@ class="w-full bg-slate-100 rounded-2xl p-4 text-sm font-bold outline-none mb-3">
   <option value="AKTIF">Aktif</option>
   <option value="NONAKTIF">Nonaktif</option>
   <option value="BEST">Best Seller</option>
-  <option value="PROMO">Promo</option>
+  <option value="PROMO">Promo berjalan</option>
 </select>
 
 <div id="list-menu" class="space-y-3"></div>
@@ -135,6 +135,9 @@ class="w-full bg-slate-100 rounded-2xl p-4 text-sm font-bold outline-none mb-3">
       <div id="promotion-discount-fields"><label>Jenis diskon<select id="promotion-discount-type"><option value="percent">Persen (%)</option><option value="amount">Potongan rupiah per menu</option></select></label><label>Nilai diskon<input id="promotion-discount-value" type="number" min="1" step="1" placeholder="Contoh: 20"></label></div>
       <div id="promotion-bundle-fields" hidden><label>Harga satu paket (Rp)<input id="promotion-bundle-price" type="number" min="1" step="1" placeholder="Contoh: 75000"></label><p class="promo-help">Atur jumlah setiap menu yang dipilih. Satu paket berisi semua menu tersebut.</p></div>
       <div id="promotion-preview" class="promo-preview" aria-live="polite"></div>
+      <label>Mulai promo (WITA)<input id="promotion-start" type="datetime-local" step="60"></label>
+      <label>Selesai promo (WITA)<input id="promotion-end" type="datetime-local" step="60"></label>
+      <p class="promo-help">Kosongkan waktu mulai untuk berlaku langsung; kosongkan waktu selesai untuk tanpa batas akhir. Jadwal memakai waktu Samarinda (WITA / UTC+8). Aktifkan promo agar jadwal berlaku.</p>
       <label><input id="promotion-active" type="checkbox"> Aktifkan promo</label>
       <label><input id="promotion-banner" type="checkbox"> Tampilkan di banner atas</label>
       <p class="promo-help">Banner memakai foto menu pilihan. Diskon tidak ditumpuk: harga termurah yang berlaku dipakai. Paket memakai harga khususnya sendiri. Diskon persen dibulatkan ke rupiah terdekat.</p>
@@ -144,11 +147,11 @@ class="w-full bg-slate-100 rounded-2xl p-4 text-sm font-bold outline-none mb-3">
   </div>
   </section>
   </div>
-  <script src="common.js"></script>
-  <script src="settings.js"></script>
-  <script src="promotions.js"></script>
-  <script src="admin-promotions.js"></script>
-  <script src="admin-settings.js"></script>
-  <script src="admin.js"></script>
+  <script src="common.js?v=20260918"></script>
+  <script src="settings.js?v=20260918"></script>
+  <script src="promotions.js?v=20260918"></script>
+  <script src="admin-promotions.js?v=20260918"></script>
+  <script src="admin-settings.js?v=20260918"></script>
+  <script src="admin.js?v=20260918"></script>
 </body>
 </html>

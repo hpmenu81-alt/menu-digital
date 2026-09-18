@@ -1,4 +1,24 @@
 "use strict";
+let promotionClockOffset=0;
+function promotionNow(){return Date.now()+promotionClockOffset;}
+function promotionStatus(p,now=promotionNow()) {
+  if(!p.active)return "Nonaktif";
+  if(p.starts_at && Date.parse(p.starts_at)>now)return "Terjadwal";
+  if(p.ends_at && Date.parse(p.ends_at)<=now)return "Berakhir";
+  return "Berjalan";
+}
+function promotionRunning(p,now=promotionNow()){return promotionStatus(p,now)==="Berjalan";}
+function fromWitaInput(value){
+  if(!value)return null;
+  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value))throw new Error("Tanggal/jam promo tidak valid.");
+  const stamp=Date.parse(value+":00+08:00");
+  if(!Number.isFinite(stamp))throw new Error("Tanggal/jam promo tidak valid.");
+  const result=new Date(stamp).toISOString();
+  if(toWitaInput(result)!==value)throw new Error("Tanggal/jam promo tidak valid.");
+  return result;
+}
+function toWitaInput(value){return value?new Date(Date.parse(value)+8*3600000).toISOString().slice(0,16):"";}
+function scheduleLabel(p){return (p.starts_at?"Mulai "+toWitaInput(p.starts_at).replace("T"," "):"Mulai langsung")+" · "+(p.ends_at?"Selesai "+toWitaInput(p.ends_at).replace("T"," "):"Tanpa batas akhir")+" WITA";}
 function promotionPayload(input, rows) {
   const title=String(input.title||"").trim(), description=String(input.description||"").trim();
   if (!title || title.length>100 || description.length>500) throw new Error("Isi judul promo (maksimal 100 karakter) dan keterangan maksimal 500 karakter.");
@@ -13,6 +33,11 @@ function promotionPayload(input, rows) {
     return {menu_id:String(item.menu_id),quantity:input.kind==="bundle"?quantity:1};
   });
   const result={title,description,kind:input.kind,items,active:!!input.active,banner:!!input.banner,discount_type:"percent",discount_value:0,bundle_price:null};
+  for(const key of ["starts_at","ends_at"]){
+    result[key]=input[key]||null;
+    if(result[key]&&!Number.isFinite(Date.parse(result[key])))throw new Error("Tanggal/jam promo tidak valid.");
+  }
+  if(result.starts_at&&result.ends_at&&Date.parse(result.ends_at)<=Date.parse(result.starts_at))throw new Error("Waktu selesai harus setelah waktu mulai.");
   if (input.kind==="bundle") {
     result.bundle_price=validPrice(input.bundle_price);
     const normal=items.reduce((sum,item)=>sum+Number(rows.find(row=>String(row.id)===item.menu_id).harga)*item.quantity,0);
@@ -27,8 +52,8 @@ function promotionPayload(input, rows) {
 function discountPrice(base,promo) {
   return promo.discount_type==="percent" ? Math.round(Number(base)*(100-Number(promo.discount_value))/100) : Number(base)-Number(promo.discount_value);
 }
-function buildOfferCatalog(rows,promotions) {
-  const active=promotions.filter(p=>p.active), result=rows.map(menu=>{
+function buildOfferCatalog(rows,promotions,now=promotionNow()) {
+  const active=promotions.filter(p=>promotionRunning(p,now)), result=rows.map(menu=>{
     let price=Number(menu.harga), offer=null;
     for (const p of active.filter(p=>p.kind==="discount" && p.items.some(i=>String(i.menu_id)===String(menu.id)))) {
       const candidate=discountPrice(menu.harga,p);
@@ -56,6 +81,9 @@ function priceDisplay(menu) {
   return node;
 }
 async function readPromotions(activeOnly=false) {
+  const {data:clock,error:clockError}=await client.rpc("menu_server_time");
+  if(clockError||typeof clock!=="string"||!Number.isFinite(Date.parse(clock)))throw new Error("Waktu promo belum bisa diperiksa. Coba lagi.");
+  promotionClockOffset=Date.parse(clock)-Date.now();
   const rows=[];
   for(let offset=0;;offset+=500) {
     let query=client.from("menu_promotions").select("*").order("created_at",{ascending:false}).order("id");
