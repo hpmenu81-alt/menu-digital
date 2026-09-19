@@ -16,7 +16,7 @@ let promos=[];
    await page.evaluate(({rows,promos,admin})=>{
      window.mockRows=rows;window.mockPromos=promos;window.allowed=admin;window.failPromo=false;window.opened=[];window.alerts=[];
      window.confirm=()=>true;window.alert=t=>window.alerts.push(t);
-     window.supabase={createClient:()=>({rpc:async()=>({data:window.allowed}),auth:{getSession:async()=>({data:{session:admin?{}:null}}),onAuthStateChange:()=>{}},from:table=>{
+     window.supabase={createClient:()=>({rpc:async name=>({data:name==="menu_server_time"?new Date().toISOString():window.allowed}),auth:{getSession:async()=>({data:{session:admin?{}:null}}),onAuthStateChange:()=>{}},from:table=>{
        let payload=null,insert=false,filters={};
        return {select(){return this},order(){return this},eq(k,v){filters[k]=v;return this},insert(p){payload=p;insert=true;return this},update(p){payload=p;return this},
        async range(){if(table==='menu_promotions'&&window.failPromo)return {error:{message:'Network error'}};return {data:table==='menus'?window.mockRows.filter(m=>!filters.aktif||m.aktif):window.mockPromos.filter(p=>!filters.active||p.active)};},
@@ -30,7 +30,7 @@ let promos=[];
        }};
      }})};
    },{rows,promos,admin});
-   for(const file of ['common.js','settings.js','promotions.js',...(admin?['admin-promotions.js','admin-settings.js','admin.js']:['customer.js'])])await page.addScriptTag({path:path.join(root,file)});
+   for(const file of ['common.js','settings.js','promotions.js',...(admin?['admin-promotions.js','admin-settings.js','admin.js']:['cart-storage.js','customer.js'])])await page.addScriptTag({path:path.join(root,file)});
    if(admin)await page.waitForFunction(()=>!document.getElementById('admin-content').hidden);
    else{await page.waitForFunction(()=>promotionsReady);await page.evaluate(()=>{openOrderWhatsApp=url=>window.opened.push(url);});}
  }
@@ -39,6 +39,10 @@ let promos=[];
  await page.locator('#promotion-discount-value').fill('20');await page.locator('#promotion-active').check();await page.locator('#promotion-banner').check();
  await page.locator('#promotion-save').click();await page.waitForFunction(()=>window.mockPromos.length===1);
  assert.equal(await page.locator('#promotion-list h3').textContent(),"Chef's <Promo>");assert.equal(await page.locator('#promotion-list h3 img').count(),0);
+ await page.locator('#tabList').click();await page.locator('#filterAdmin').selectOption('PROMO');await page.waitForFunction(()=>document.querySelectorAll('#list-menu article').length===1);
+ assert.equal(await page.locator('#list-menu article .price-new').textContent(),'Rp 20.000');
+ await page.locator('#list-menu article').getByRole('button',{name:'Edit',exact:true}).click();assert.equal(await page.locator('#harga').inputValue(),'25000');
+ await page.locator('#tabPromotions').click();
  await page.locator('#promotion-new').click();await page.locator('#promotion-title').fill('Paket berdua');await page.locator('#promotion-kind').selectOption('bundle');
  await page.getByRole('checkbox',{name:'Pilih Nasi',exact:true}).check();await page.getByRole('spinbutton',{name:'Jumlah Nasi',exact:true}).fill('2');
  await page.getByRole('checkbox',{name:'Pilih Teh',exact:true}).check();await page.locator('#promotion-bundle-price').fill('45000');await page.locator('#promotion-active').check();await page.locator('#promotion-banner').check();

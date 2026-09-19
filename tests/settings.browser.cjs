@@ -24,7 +24,7 @@ let saved={id:1,version:0,store_name:"Happy Puppy Panjaitan",whatsapp:"628125576
      window.open=url=>window.opened.push(url);
      window.confirm=()=>true;
      window.supabase={createClient:()=>({
-       rpc:async()=>({data:window.allowed}),
+       rpc:async name=>({data:name==="menu_server_time"?new Date().toISOString():window.allowed}),
        auth:{onAuthStateChange:()=>{},getSession:async()=>({data:{session:admin?{}:null}}),signOut:async()=>({})},
        from:table=>{
          let update=null,version;
@@ -44,7 +44,7 @@ let saved={id:1,version:0,store_name:"Happy Puppy Panjaitan",whatsapp:"628125576
        }
      })};
    },{rows,saved,admin,fail});
-   for(const file of ["common.js","settings.js","promotions.js",...(admin?["admin-promotions.js","admin-settings.js","admin.js"]:["customer.js"])]) await page.addScriptTag({path:path.join(root,file)});
+   for(const file of ["common.js","settings.js","promotions.js",...(admin?["admin-promotions.js","admin-settings.js","admin.js"]:["cart-storage.js","customer.js"])]) await page.addScriptTag({path:path.join(root,file)});
    if(!admin)await page.evaluate(()=>{openOrderWhatsApp=url=>window.opened.push(url);});
    if(admin)await page.waitForFunction(()=>document.getElementById("admin-content").hidden===false);
    else await page.waitForFunction(()=>document.querySelectorAll("#container-menu article").length===3);
