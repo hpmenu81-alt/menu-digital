@@ -7,16 +7,16 @@ let promos=[];
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try{
  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];
- page.on('pageerror',e=>errors.push(e.message));await page.route('https://**/*',r=>r.abort());
+ page.on('pageerror',e=>errors.push(e.message));await page.route('https://**/*',r=>r.abort());await page.route('https://images.test/banner.png',r=>r.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64')}));
  async function load(admin){
-   await page.goto('about:blank');
+   await page.route('https://menu.test/',r=>r.fulfill({body:'<!doctype html><html></html>',contentType:'text/html'})); await page.goto('https://menu.test/');
    await page.setContent(fs.readFileSync(path.join(root,admin?'admin.html':'index.html'),'utf8').replace(/<script[\s\S]*?<\/script>/g,''));
    await page.addStyleTag({content:'.hidden,[hidden]{display:none!important}button{padding:10px}body{margin:0;padding-bottom:250px}img{max-width:80px}'});
    await page.addStyleTag({path:path.join(root,'promotions.css')});
    await page.evaluate(({rows,promos,admin})=>{
      window.mockRows=rows;window.mockPromos=promos;window.allowed=admin;window.failPromo=false;window.opened=[];window.alerts=[];
      window.confirm=()=>true;window.alert=t=>window.alerts.push(t);
-     window.supabase={createClient:()=>({rpc:async name=>({data:name==="menu_server_time"?new Date().toISOString():window.allowed}),auth:{getSession:async()=>({data:{session:admin?{}:null}}),onAuthStateChange:()=>{}},from:table=>{
+     window.supabase={createClient:()=>({storage:{from:()=>({upload:async()=>window.uploadFail?{error:{message:'Upload gagal'}}:{},getPublicUrl:()=>({data:{publicUrl:'https://images.test/banner.png'}})})},rpc:async name=>({data:name==="menu_server_time"?new Date().toISOString():window.allowed}),auth:{getSession:async()=>({data:{session:admin?{}:null}}),onAuthStateChange:()=>{}},from:table=>{
        let payload=null,insert=false,filters={};
        return {select(){return this},order(){return this},eq(k,v){filters[k]=v;return this},insert(p){payload=p;insert=true;return this},update(p){payload=p;return this},
        async range(){if(table==='menu_promotions'&&window.failPromo)return {error:{message:'Network error'}};return {data:table==='menus'?window.mockRows.filter(m=>!filters.aktif||m.aktif):window.mockPromos.filter(p=>!filters.active||p.active)};},
@@ -37,7 +37,19 @@ let promos=[];
  await load(true);await page.locator('#tabPromotions').click();await page.waitForFunction(()=>!document.getElementById('promotion-save').disabled);
  await page.locator('#promotion-title').fill("Chef's <Promo>");await page.getByRole('checkbox',{name:'Pilih Nasi',exact:true}).check();
  await page.locator('#promotion-discount-value').fill('20');await page.locator('#promotion-active').check();await page.locator('#promotion-banner').check();
- await page.locator('#promotion-save').click();await page.waitForFunction(()=>window.mockPromos.length===1);
+ 
+ await page.locator('#promotion-position').fill('20');
+ await page.locator('#promotion-image-file').setInputFiles({name:'bad.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg/>')});
+ assert.match(await page.locator('#promotion-status').textContent(),/maksimal 5 MB/);
+ await page.locator('#promotion-image-file').setInputFiles({name:'banner.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64')});
+ assert.match(await page.locator('#promotion-banner-preview img').getAttribute('src'),/^blob:/);
+ await page.evaluate(()=>window.uploadFail=true);await page.locator('#promotion-save').click();
+ await page.waitForFunction(()=>document.getElementById('promotion-status').textContent.includes('Upload gagal'));
+ assert.equal(await page.evaluate(()=>window.mockPromos.length),0);
+ await page.evaluate(()=>window.uploadFail=false);await page.locator('#promotion-save').click();await page.waitForFunction(()=>window.mockPromos.length===1);
+ assert.equal(await page.evaluate(()=>window.mockPromos[0].banner_image_url),'https://images.test/banner.png');
+ assert.equal(await page.evaluate(()=>window.mockPromos[0].banner_position),20);
+ assert.equal(await page.locator('#promotion-banner-preview img').getAttribute('src'),'https://images.test/banner.png');
  assert.equal(await page.locator('#promotion-list h3').textContent(),"Chef's <Promo>");assert.equal(await page.locator('#promotion-list h3 img').count(),0);
  await page.locator('#tabList').click();await page.locator('#filterAdmin').selectOption('PROMO');await page.waitForFunction(()=>document.querySelectorAll('#list-menu article').length===1);
  assert.equal(await page.locator('#list-menu article .price-new').textContent(),'Rp 20.000');
@@ -52,7 +64,9 @@ let promos=[];
  await page.waitForFunction(()=>document.getElementById('promotion-status').textContent.includes('admin lain'));assert.equal(await page.evaluate(()=>window.mockPromos[1].title),'Paket berdua');
  await page.evaluate(()=>window.allowed=false);await page.locator('#promotion-save').click();await page.waitForFunction(()=>document.getElementById('promotion-status').textContent.includes('Akses admin'));
  await load(false);
- assert.equal(await page.locator('#promotion-banners article').count(),2);assert.equal(await page.locator('#container-menu article').count(),3);
+ assert.equal(await page.locator('#promotion-banners article').count(),2);
+ assert.equal(await page.locator('#promotion-banners article h3').first().textContent(),'Paket berdua');
+ assert.equal(await page.locator('#promotion-banners article.custom-image img').getAttribute('src'),'https://images.test/banner.png');assert.equal(await page.locator('#container-menu article').count(),3);
  assert.equal(await page.locator('#container-menu article').first().locator('del').textContent(),'Rp 25.000');
  assert.equal(await page.locator('#container-menu article').first().locator('.price-new').textContent(),'Rp 20.000');
  await page.getByRole('button',{name:'Lihat menu promo',exact:true}).click();assert.equal(await page.locator('#container-menu article').count(),1);
