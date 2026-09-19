@@ -1,5 +1,14 @@
 # Menu Happy Puppy Panjaitan
 
+## Tampilan pelanggan — 19 September 2026
+
+- Foto memenuhi bagian atas kartu; katalog memakai 2 kolom di HP, 3 di tablet, dan 4 di desktop. Navigasi bawah lebih besar dan tombol jumlah minimal 44 piksel.
+- Paket kosong menampilkan penjelasan serta tombol kembali ke semua menu.
+- Menu yang namanya mencantumkan **panas dan dingin** meminta jumlah masing-masing di keranjang. Jumlah harus sesuai total gelas sebelum WhatsApp dapat dilanjutkan. Pilihan tersimpan bersama keranjang, diperiksa ulang saat harga/menu berubah, dan masuk ke pesan WhatsApp. Untuk bundling, jumlah minuman dikalikan jumlah paket. Harga mengikuti menu/paket yang sama; tidak ada tambahan harga untuk suhu.
+- Admin → Promo: unggah gambar banner JPG/PNG/WebP maksimal 5 MB, atur **Urutan banner** (angka terkecil dahulu), dan lihat pratinjau. Gambar mendatar 1200 × 600 disarankan; gambar ditampilkan utuh tanpa memotong teks poster. **Gunakan foto menu** mengembalikan gambar bawaan. Gambar baru disimpan saat Simpan promo, dengan akses admin dan pemeriksaan versi seperti promo lainnya.
+- Migrasi `supabase/migrations/20260919121202_banner_presentation.sql` sudah diterapkan. Tidak perlu memulihkan backup lagi. Gambar menggunakan bucket `menu-images` dengan kebijakan admin yang sudah ada. Berkas unggahan tidak dihapus otomatis saat respons simpan gagal karena transaksi mungkin sudah berhasil.
+- Pengujian tambahan: `node --test tests/customer-display.test.cjs`, `node tests/customer-display.browser.cjs`, dan `node tests/banner-display.browser.cjs` (Playwright/Edge; data simulasi, tanpa menulis produksi).
+
 ## Perbaikan prioritas 1 — 18 September 2026
 
 - Keranjang, jumlah, catatan dan room tersimpan di perangkat selama 12 jam sejak pembaruan terakhir. Harga tidak diambil dari penyimpanan perangkat; menu serta harga terbaru digunakan saat pemulihan. Keranjang lama dibersihkan jika QR mengarah ke room berbeda. Jika penyimpanan perangkat diblokir, situs tetap dapat digunakan dengan pemberitahuan.

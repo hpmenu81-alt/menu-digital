@@ -33,6 +33,10 @@ function promotionPayload(input, rows) {
     return {menu_id:String(item.menu_id),quantity:input.kind==="bundle"?quantity:1};
   });
   const result={title,description,kind:input.kind,items,active:!!input.active,banner:!!input.banner,discount_type:"percent",discount_value:0,bundle_price:null};
+  result.banner_image_url=String(input.banner_image_url||"").trim();
+  if(result.banner_image_url){let url;try{url=new URL(result.banner_image_url);}catch{}if(!url||url.protocol!=="https:"||url.username||url.password||result.banner_image_url.length>2048)throw new Error("URL gambar banner harus HTTPS yang valid.");}
+  result.banner_position=Number(input.banner_position??0);
+  if(!Number.isInteger(result.banner_position)||result.banner_position<0||result.banner_position>9999)throw new Error("Urutan banner harus 0–9999.");
   for(const key of ["starts_at","ends_at"]){
     result[key]=input[key]||null;
     if(result[key]&&!Number.isFinite(Date.parse(result[key])))throw new Error("Tanggal/jam promo tidak valid.");
@@ -67,7 +71,7 @@ function buildOfferCatalog(rows,promotions,now=promotionNow()) {
     const normal=parts.reduce((sum,part)=>sum+Number(part.menu.harga)*part.quantity,0), price=Number(p.bundle_price);
     if(!Number.isSafeInteger(price)||price<1||price>=normal)continue;
     const contents=parts.map(part=>part.quantity+"× "+part.menu.nama).join(" + ");
-    result.push({id:"bundle:"+p.id,nama:p.title,kategori:"PAKET",harga:price,original_price:normal,deskripsi:p.description,contents,foto_url:parts[0].menu.foto_url,aktif:true,promo:true,offer_id:p.id,offer_title:p.title,is_bundle:true});
+    result.push({id:"bundle:"+p.id,nama:p.title,kategori:"PAKET",harga:price,original_price:normal,deskripsi:p.description,contents,foto_url:parts[0].menu.foto_url,aktif:true,promo:true,offer_id:p.id,offer_title:p.title,is_bundle:true,serving_parts:parts.filter(part=>/panas/i.test(part.menu.nama)&&/dingin/i.test(part.menu.nama)).map(part=>({id:String(part.menu.id),nama:part.menu.nama,quantity:part.quantity}))});
   }
   return result;
 }
@@ -79,6 +83,20 @@ function priceDisplay(menu) {
   }
   node.append(el("strong",rupiah(menu.harga),"price-new"));
   return node;
+}
+function orderedBanners(rows){return [...rows].sort((a,b)=>(a.banner_position||0)-(b.banner_position||0)||String(a.title).localeCompare(String(b.title),"id")||String(a.id).localeCompare(String(b.id)));}
+function promotionBanner(p,candidates,onAction,previewImage){
+  const first=candidates[0],banner=el("article","","promo-banner"+(p.kind==="bundle"?" bundle":"")),copy=el("div","","promo-banner-copy");
+  const image=menuImage(p.banner_image_url||first.foto_url,p.title);
+  if(previewImage)image.src=previewImage;
+  image.className="promo-banner-image";
+  if(p.banner_image_url||previewImage)banner.classList.add("custom-image");
+  copy.append(el("span",p.kind==="bundle"?"Paket bundling":p.discount_type==="percent"?"Diskon "+p.discount_value+"%":"Potongan "+rupiah(p.discount_value),"promo-label"),el("h3",p.title),el("p",p.description||""));
+  if(p.kind==="bundle")copy.append(el("p",first.contents),priceDisplay(first));
+  else copy.append(el("p",candidates.map(m=>m.nama).join(" · ")));
+  const button=action(p.kind==="bundle"?"Tambah paket +":"Lihat menu promo",onAction||(()=>{}),"promo-cta");
+  if(!onAction)button.disabled=true;
+  copy.append(button);banner.append(image,copy);return banner;
 }
 async function readPromotions(activeOnly=false) {
   const {data:clock,error:clockError}=await client.rpc("menu_server_time");

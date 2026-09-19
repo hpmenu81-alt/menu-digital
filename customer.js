@@ -21,7 +21,8 @@ function deteksiRoom() {
 function cekRoomStatus() {
   $("checkout-room").value=room();persistCart();
   $("info-room-header").textContent = room() ? "📍 Room: " + room() : "📍 Pilih Room";
-  $("btn-kirim-wa").disabled = !storeSettingsReady || !promotionsReady || checkingOrder || !room() || cart.size === 0;
+  $("btn-kirim-wa").disabled = !storeSettingsReady || !promotionsReady || checkingOrder || !room() || cart.size === 0 || [...cart.values()].some(item=>!servingsComplete(item));
+  $("serving-status").textContent=[...cart.values()].some(item=>!servingsComplete(item))?"Lengkapi pilihan panas/dingin untuk semua minuman sebelum melanjutkan.":"";
   $("btn-kirim-wa").textContent = room() ? "Lanjutkan ke WhatsApp" : "Pilih Room Dulu 🎤";
 }
 async function ambilData() {
@@ -32,7 +33,7 @@ async function ambilData() {
     databaseMenu=orderedMenus(buildOfferCatalog(baseCustomerMenus,promos));
     if(!cartRestored){
       const items=savedCart?.items||[];
-      for(const item of items){const menu=databaseMenu.find(m=>String(m.id)===item.id);if(menu)cart.set(item.id,{...menu,qty:item.qty,catatan:item.catatan});}
+      for(const item of items){const menu=databaseMenu.find(m=>String(m.id)===item.id);if(menu)cart.set(item.id,{...menu,qty:item.qty,catatan:item.catatan,servings:normalizeServings({...menu,qty:item.qty},item.servings)});}
       cartRestored=true;savedCart=null;
       if(items.length)$("cart-notice").textContent=cart.size?"Keranjang dipulihkan dengan harga terbaru. Periksa kembali sebelum memesan.":"Menu dari keranjang sebelumnya sudah tidak tersedia.";
     }
@@ -51,7 +52,7 @@ function quantities(menu, refreshCart = false) {
   return controls;
 }
 function card(menu) {
-  const node = el("article", "", "menu-card bg-white rounded-2xl p-3 min-w-[160px]");
+  const node = el("article", "", "menu-card");
   node.append(menuImage(menu.foto_url, menu.nama), el("h3", menu.nama, "font-black text-sm mt-2"), el("p", menu.deskripsi || "", "text-xs text-slate-500"), priceDisplay(menu));
   if(menu.contents)node.append(el("p",menu.contents,"bundle-contents"));
   const badges = [menu.offer_id && "🔥 PROMO", menu.best_seller && "⭐ BEST SELLER", menu.kategori === "PAKET" && "🎁 PAKET"].filter(Boolean);
@@ -61,9 +62,14 @@ function card(menu) {
 }
 function renderMenu() {
   const filtered = databaseMenu.filter(m => (!promotionFilter || m.offer_id===promotionFilter) && (katAktif === "SEMUA" || m.kategori === katAktif) && String(m.nama).toLowerCase().includes(queryCari));
-  const grid = el("div", "", "grid grid-cols-2 gap-2 text-left");
+  const grid = el("div", "", "customer-grid");
   filtered.forEach(menu => grid.append(card(menu)));
-  $("container-menu").replaceChildren(filtered.length ? grid : el("p", "Menu tidak ditemukan.", "py-12"));
+  $("container-menu").replaceChildren(filtered.length ? grid : emptyMenuState());
+}
+function emptyMenuState(){
+  const node=el("div","","empty-menu");
+  node.append(el("h3",katAktif==="PAKET"&&!queryCari?"Belum ada paket tersedia":"Menu tidak ditemukan"),el("p",katAktif==="PAKET"&&!queryCari?"Paket spesial akan muncul di sini saat tersedia. Anda tetap bisa memilih menu satuan.":"Coba kata kunci lain atau lihat semua menu."));
+  node.append(action("Lihat semua menu",()=>{resetCariSticky();gantiKat("SEMUA");setActiveNav("menu");}));return node;
 }
 function renderBestSeller() {
   const best = databaseMenu.filter(m => m.best_seller || m.offer_id || m.kategori === "PAKET");
@@ -93,6 +99,7 @@ function ubahQty(id, delta) {
   if (!menu) return;
   const item = cart.get(String(id)) || { ...menu, qty: 0, catatan: "" };
   item.qty = Math.max(0, Math.min(99, item.qty + delta));
+  item.servings=normalizeServings(item,item.servings);
   if (item.qty) cart.set(String(id), item); else cart.delete(String(id));
   updateBar(); renderMenu(); renderBestSeller(); renderBanners();
 }
@@ -116,7 +123,8 @@ function munculkanPopup(event) {
     note.addEventListener("input", () => { const current=cart.get(String(item.id));if(current)current.catatan=note.value;persistCart(); });
     node.append(el("h3", item.nama, "font-black"),priceDisplay(item));
     if(item.contents)node.append(el("p",item.contents,"bundle-contents"));
-    node.append(el("p", "Subtotal: "+rupiah(Number(item.harga) * item.qty)), quantities(item, true), note);
+    node.append(el("p", "Subtotal: "+rupiah(Number(item.harga) * item.qty)), quantities(item, true));
+    appendServingControls(node,item);node.append(note);
     $("list-checkout").append(node);
   }
   $("harga-akhir").textContent = $("subtotal-angka").textContent = rupiah(total());
@@ -124,39 +132,55 @@ function munculkanPopup(event) {
   document.body.style.overflow = "hidden";
   cekRoomStatus();
 }
+function appendServingControls(node,item){
+  for(const part of servingParts(item)){
+    const group=el("fieldset","","serving-choice"),required=part.quantity*item.qty;
+    group.append(el("legend",part.nama+" · "+required+" gelas"));
+    const inputs={};
+    for(const [key,label] of [["hot","Panas"],["cold","Dingin"]]){
+      const wrapper=el("label",label),input=el("input","");input.type="number";input.min="0";input.max=String(required);input.step="1";input.value=item.servings[part.id][key];
+      input.setAttribute("aria-label","Jumlah "+label.toLowerCase()+" untuk "+part.nama+" — "+item.nama);inputs[key]=input;
+      input.addEventListener("input",()=>{
+        const current=cart.get(String(item.id));if(!current)return;
+        current.servings[part.id]={hot:inputs.hot.valueAsNumber,cold:inputs.cold.valueAsNumber};
+        const valid=[inputs.hot,inputs.cold].every(x=>x.validity.valid&&x.value!=="")&&inputs.hot.valueAsNumber+inputs.cold.valueAsNumber===required;
+        help.textContent=valid?"Pilihan lengkap":"Isi jumlah panas + dingin = "+required+" gelas.";
+        cekRoomStatus();
+      });wrapper.append(input);group.append(wrapper);
+    }
+    const help=el("p",servingsComplete(item)?"Pilihan lengkap":"Isi jumlah panas + dingin = "+required+" gelas.","promo-help");group.append(help);node.append(group);
+  }
+}
 function hilangkanPopup() { $("layar-hitam").classList.remove("tampil"); document.body.style.overflow = ""; }
 function resetKeranjang() { if (confirm("Hapus semua item di keranjang?")) { cart.clear(); hilangkanPopup(); updateBar(); renderMenu(); renderBestSeller();$("cart-notice").textContent="Keranjang dikosongkan."; } }
 function syncCartPrices() {
-  for(const [id,item] of cart){const current=databaseMenu.find(menu=>String(menu.id)===id);if(current)cart.set(id,{...current,qty:item.qty,catatan:item.catatan});else cart.delete(id);}
+  for(const [id,item] of cart){const current=databaseMenu.find(menu=>String(menu.id)===id);if(current)cart.set(id,{...current,qty:item.qty,catatan:item.catatan,servings:normalizeServings({...current,qty:item.qty},item.servings)});else cart.delete(id);}
 }
 function renderBanners(){
   const section=$("promotion-banners"),track=el("div","","promo-track");
-  for(const p of customerPromotions.filter(p=>promotionRunning(p)&&p.banner)){
+  for(const p of orderedBanners(customerPromotions).filter(p=>promotionRunning(p)&&p.banner)){
     const candidates=databaseMenu.filter(m=>p.kind==="bundle"?m.id==="bundle:"+p.id:m.offer_id===p.id);
     if(!candidates.length)continue;
-    const first=candidates[0],banner=el("article","","promo-banner"+(p.kind==="bundle"?" bundle":"")),copy=el("div","");
-    copy.append(el("span",p.kind==="bundle"?"Paket bundling":p.discount_type==="percent"?"Diskon "+p.discount_value+"%":"Potongan "+rupiah(p.discount_value),"promo-label"),el("h3",p.title),el("p",p.description));
-    if(p.kind==="bundle")copy.append(el("p",first.contents),priceDisplay(first));
-    else copy.append(el("p",candidates.map(m=>m.nama).join(" · ")));
-    copy.append(action(p.kind==="bundle"?"Tambah paket +":"Lihat menu promo",()=>{
+    const first=candidates[0];
+    const banner=promotionBanner(p,candidates,()=>{
+
       if(p.kind==="bundle"){ubahQty(first.id,1);return;}
       queryCari="";$("input-cari-sticky").value="";$("btn-reset-cari-sticky").classList.add("hidden");katAktif="SEMUA";promotionFilter=p.id;renderTabs();renderMenu();
       $("judul-kategori-menu").textContent=p.title;$("sticky-order-bar").scrollIntoView({behavior:"smooth"});
-    },"promo-cta"));
-    banner.append(copy,menuImage(first.foto_url,first.nama));track.append(banner);
+    });track.append(banner);
   }
   section.replaceChildren(el("h2","Promo pilihan","promo-heading"),track);section.hidden=!track.children.length;
 }
 function whatsappURL(message) { return "https://wa.me/" + storeSettings.whatsapp + "?text=" + encodeURIComponent(message); }
 function openOrderWhatsApp(url) { window.location.assign(url); }
 async function jalankanKirimWA() {
-  if (!storeSettingsReady || !promotionsReady || checkingOrder || !room() || !cart.size) return;
+  if (!storeSettingsReady || !promotionsReady || checkingOrder || !room() || !cart.size || [...cart.values()].some(item=>!servingsComplete(item))) return;
   checkingOrder=true;cekRoomStatus();
-  const oldCart=JSON.stringify([...cart.values()].map(i=>[i.id,i.harga,i.nama,i.contents]));
+  const oldCart=JSON.stringify([...cart.values()].map(i=>[i.id,i.harga,i.nama,i.contents,i.servings]));
   try {
     const [rows,promos,settings]=await Promise.all([readMenus(true),readPromotions(true),readStoreSettings()]);
     baseCustomerMenus=rows;databaseMenu=orderedMenus(buildOfferCatalog(rows,promos));customerPromotions=promos;storeSettings=settings;syncCartPrices();persistCart();schedulePromoRefresh();
-    if(oldCart!==JSON.stringify([...cart.values()].map(i=>[i.id,i.harga,i.nama,i.contents]))) {
+    if(oldCart!==JSON.stringify([...cart.values()].map(i=>[i.id,i.harga,i.nama,i.contents,i.servings]))) {
       renderTabs();renderMenu();renderBestSeller();renderBanners();updateBar();munculkanPopup();
       alert("Harga atau ketersediaan menu berubah. Periksa keranjang terbaru, lalu lanjutkan lagi.");return;
     }
@@ -167,6 +191,7 @@ async function jalankanKirimWA() {
     lines.push("• " + item.nama + " (" + item.qty + "x) @ "+rupiah(item.harga)+" = "+rupiah(item.harga*item.qty));
     if(item.contents)lines.push("  Isi per paket: "+item.contents);
     if(item.original_price>item.harga)lines.push("  Harga normal: "+rupiah(item.original_price)+" · "+(item.offer_title||"Promo"));
+    if(servingParts(item).length)lines.push("  Pilihan: "+servingDescription(item));
     if (item.catatan) lines.push("  Catatan: " + item.catatan);
   }
   lines.push("", "TOTAL: " + rupiah(total()), "Mohon konfirmasi pesanan ke room. Terima kasih!");
