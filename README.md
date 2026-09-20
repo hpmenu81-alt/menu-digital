@@ -1,5 +1,15 @@
 # Menu Happy Puppy Panjaitan
 
+## Operasional admin — 20 September 2026
+
+- **Ringkasan**: menu aktif, siap dipesan, habis, nonaktif, promo berjalan sesuai jadwal, dan room aktif. Gunakan Muat ulang untuk mengambil kondisi terbaru.
+- **Kelola Menu → Tandai habis / Tersedia lagi**: menu habis tetap tampil tanpa tombol tambah. Paket yang memiliki bahan/menu habis tidak ditawarkan. Keranjang diperiksa kembali sebelum WhatsApp; item yang menjadi habis dikeluarkan dan pelanggan diminta memeriksa ulang. Status bukan perhitungan stok otomatis.
+- **Promo → Arsipkan**: promo dinonaktifkan dan dipindahkan ke Arsip promo. Pemulihan mengembalikan promo dalam keadaan nonaktif, agar admin dapat memeriksa harga dan jadwal sebelum mengaktifkannya.
+- **Room & QR**: tambah room, ubah nama/kelompok/urutan, aktifkan/nonaktifkan, dan unduh QR PNG. Semua 28 kode room lama dipertahankan. Kode tidak bisa diganti setelah disimpan; QR lama tetap mengacu pada kode yang sama. Room nonaktif tidak muncul dalam pilihan pelanggan. Saat checkout, daftar room diperiksa lagi. QR berisi alamat produksi menu digital dan dibuat di perangkat, tanpa layanan gambar eksternal.
+- **Riwayat perubahan**: otomatis merekam perubahan menu, promo, pengaturan toko, serta room sejak pemasangan. Menampilkan akun admin, waktu WITA, dan nilai sebelum/sesudah; dilengkapi filter dan pemuatan bertahap. Riwayat hanya dapat dibaca admin. Browser tidak diberi hak menulis, mengedit, atau menghapus log. Perubahan SQL tanpa akun pengguna ditandai Sistem / SQL.
+- Migrasi `supabase/migrations/20260920130646_admin_operations.sql` sudah diterapkan dan diuji dalam transaksi rollback. Tidak perlu menjalankan ulang pemulihan backup. RLS melindungi room dan riwayat. Fungsi pencatat menggunakan trigger privat; tidak tersedia sebagai RPC publik.
+- Perubahan admin terlihat setelah halaman pelanggan dimuat ulang, dengan pemeriksaan ulang harga/ketersediaan/room sebelum WhatsApp. Pengujian: `node --test tests/operations.test.cjs` dan `node tests/operations.browser.cjs` (Playwright/Edge dan `jsqr@1.4.0`; data simulasi). QR hasil aplikasi diuji dengan decoder terpisah. Pustaka QR lokal dipatok pada `qrcode-generator@2.0.4`; lihat `THIRD-PARTY.md`.
+
 ## Tampilan pelanggan — 19 September 2026
 
 - Foto memenuhi bagian atas kartu; katalog memakai 2 kolom di HP, 3 di tablet, dan 4 di desktop. Navigasi bawah lebih besar dan tombol jumlah minimal 44 piksel.

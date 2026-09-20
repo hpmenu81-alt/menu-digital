@@ -37,7 +37,7 @@ function menuPayload(values, editing) {
 async function readMenus(activeOnly = false) {
   const rows = [];
   for (let offset = 0; ; offset += 500) {
-    let query = client.from("menus").select("id,nama,harga,kategori,deskripsi,foto_url,aktif,best_seller,promo,created_at").order("created_at", { ascending: false }).order("id");
+    let query = client.from("menus").select("id,nama,harga,kategori,deskripsi,foto_url,aktif,tersedia,best_seller,promo,created_at").order("created_at", { ascending: false }).order("id");
     if (activeOnly) query = query.eq("aktif", true);
     const { data, error } = await query.range(offset, offset + 499);
     if (error) throw error;

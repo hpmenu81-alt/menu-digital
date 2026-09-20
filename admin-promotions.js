@@ -76,14 +76,15 @@ function editPromotion(p){
   $("promotion-form").scrollIntoView({behavior:"smooth"});
 }
 function renderPromotionList(){
-  $("promotion-list").replaceChildren(...orderedBanners(promotionRows).map(p=>{
+  $("promotion-list").replaceChildren(...orderedBanners(promotionRows).filter(p=>$("promotion-archive-filter").value==="archived"?p.archived:!p.archived).map(p=>{
     const card=el("article","","promo-list-card");card.append(el("h3",p.title),el("p",promotionStatus(p)+" · "+(p.kind==="bundle"?"Bundling":"Diskon menu")+(p.banner?" · Banner diaktifkan":""),"promo-help"),el("p",scheduleLabel(p),"promo-help"));
     card.append(el("p",p.items.map(i=>(i.quantity+"× "+(menus.find(m=>String(m.id)===String(i.menu_id))?.nama||"Menu tidak tersedia"))).join(", "),"promo-help"));
-    card.append(action("Edit promo",()=>editPromotion(p)),action(p.active?"Nonaktifkan":"Aktifkan",()=>togglePromotion(p)));
+    if(p.archived)card.append(action("Pulihkan promo",()=>archivePromotion(p,false)));
+    else card.append(action("Edit promo",()=>editPromotion(p)),action(p.active?"Nonaktifkan":"Aktifkan",()=>togglePromotion(p)),action("Arsipkan",()=>archivePromotion(p,true)));
     if(p.banner)card.append(el("p","Urutan banner: "+(p.banner_position||0),"promo-help"));
     return card;
   }));
-  if(!promotionRows.length)$("promotion-list").append(el("p","Belum ada promo. Buat promo pertama di bawah.","promo-help"));
+  if(!$("promotion-list").children.length)$("promotion-list").append(el("p",$("promotion-archive-filter").value==="archived"?"Belum ada promo di arsip.":"Belum ada promo. Buat promo pertama di bawah.","promo-help"));
 }
 async function persistPromotion(payload,edit){
   await requireAdmin();
@@ -126,6 +127,17 @@ async function togglePromotion(p){
   }catch(error){if(request===promotionRequest)$("promotion-status").textContent=error.message;}
   finally{setBusy(false);}
 }
+async function archivePromotion(p,archived){
+  if(!authorized||busy||(promotionDirty&&!confirm("Buang perubahan promo yang belum disimpan?")))return;
+  const request=promotionRequest;
+  try{setBusy(true);const data=await persistPromotion({archived,active:false},p);
+    if(!authorized||request!==promotionRequest)return;
+    promotionRows=promotionRows.map(row=>row.id===p.id?data:row);adminPromotionRows=promotionRows;
+    if(promotionEdit?.id===p.id){setBusy(false);promotionDirty=false;newPromotion();}
+    renderPromotionList();renderAdmin();$("promotion-status").textContent=archived?"Promo diarsipkan dan dinonaktifkan.":"Promo dipulihkan dalam keadaan nonaktif. Periksa jadwal dan harga sebelum mengaktifkan.";
+  }catch(error){if(request===promotionRequest)$("promotion-status").textContent=error.message;}finally{setBusy(false);}
+}
+$("promotion-archive-filter").addEventListener("change",renderPromotionList);
 $("promotion-form").addEventListener("submit",savePromotion);
 $("promotion-form").addEventListener("input",event=>{if(event.target.id!=="promotion-search"){promoDirty();previewPromotion();}});
 $("promotion-kind").addEventListener("change",renderPromotionPicker);

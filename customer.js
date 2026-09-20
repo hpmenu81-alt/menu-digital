@@ -2,6 +2,7 @@
 let databaseMenu = [], katAktif = "SEMUA", queryCari = "";
 const cart = new Map();
 let customerPromotions=[], promotionsReady=false, checkingOrder=false, promotionFilter=null;
+let customerRooms=[],roomsReady=false,roomsInitialized=false;
 let baseCustomerMenus=[],cartRestored=false,savedCart=readSavedCart(),scheduleTimer=null;
 function persistCart(){
   if(!cartRestored)return;
@@ -11,29 +12,39 @@ function room() { return $("input-room-final").value; }
 function deteksiRoom() {
   const candidate = new URLSearchParams(location.search).get("room")?.toUpperCase();
   const valid=value=>!!value&&Array.from($("input-room-final").options).some(option=>option.value===value);
-  if(valid(candidate)){
+  if(candidate&&savedCart?.room&&savedCart.room!==candidate){savedCart=null;$("cart-notice").textContent="Room dari QR berbeda. Mulai keranjang baru.";}
+  if(candidate&&!valid(candidate)){$("input-room-final").value="";$("cart-notice").textContent="Room dari QR tidak aktif atau tidak ditemukan. Pilih room yang tersedia.";}
+  else if(valid(candidate)){
     $("input-room-final").value=candidate;
-    if(savedCart?.room&&savedCart.room!==candidate){savedCart=null;$("cart-notice").textContent="Room dari QR berbeda. Mulai keranjang baru untuk room "+candidate+".";}
   }else if(valid(savedCart?.room))$("input-room-final").value=savedCart.room;
   $("checkout-room").replaceChildren(...Array.from($("input-room-final").children,node=>node.cloneNode(true)));
+  cekRoomStatus();
+}
+function applyCustomerRooms(rows){
+  const previous=room();customerRooms=rows;fillRoomSelect($("input-room-final"),rows,previous);
+  roomsReady=true;
+  if(!roomsInitialized){deteksiRoom();roomsInitialized=true;}
+  else {fillRoomSelect($("checkout-room"),rows,room());if(previous&&!room())$("cart-notice").textContent="Room sebelumnya tidak lagi tersedia. Pilih room aktif.";}
+  if(!rows.some(r=>r.active))$("cart-notice").textContent="Belum ada room aktif. Silakan hubungi staf untuk memesan.";
   cekRoomStatus();
 }
 function cekRoomStatus() {
   $("checkout-room").value=room();persistCart();
   $("info-room-header").textContent = room() ? "📍 Room: " + room() : "📍 Pilih Room";
-  $("btn-kirim-wa").disabled = !storeSettingsReady || !promotionsReady || checkingOrder || !room() || cart.size === 0 || [...cart.values()].some(item=>!servingsComplete(item));
+  $("btn-kirim-wa").disabled = !storeSettingsReady || !roomsReady || !promotionsReady || checkingOrder || !room() || cart.size === 0 || [...cart.values()].some(item=>!servingsComplete(item));
   $("serving-status").textContent=[...cart.values()].some(item=>!servingsComplete(item))?"Lengkapi pilihan panas/dingin untuk semua minuman sebelum melanjutkan.":"";
   $("btn-kirim-wa").textContent = room() ? "Lanjutkan ke WhatsApp" : "Pilih Room Dulu 🎤";
 }
 async function ambilData() {
   try {
     promotionsReady=false;cekRoomStatus();
-    const [rows,promos]=await Promise.all([readMenus(true),readPromotions(true)]);
+    const [rows,promos,rooms]=await Promise.all([readMenus(true),readPromotions(true),readRooms(true)]);
+    applyCustomerRooms(rooms);
     customerPromotions=promos;baseCustomerMenus=rows.filter(m=>Number.isSafeInteger(Number(m.harga))&&Number(m.harga)>0);
     databaseMenu=orderedMenus(buildOfferCatalog(baseCustomerMenus,promos));
     if(!cartRestored){
       const items=savedCart?.items||[];
-      for(const item of items){const menu=databaseMenu.find(m=>String(m.id)===item.id);if(menu)cart.set(item.id,{...menu,qty:item.qty,catatan:item.catatan,servings:normalizeServings({...menu,qty:item.qty},item.servings)});}
+      for(const item of items){const menu=databaseMenu.find(m=>String(m.id)===item.id);if(menu&&menu.tersedia!==false)cart.set(item.id,{...menu,qty:item.qty,catatan:item.catatan,servings:normalizeServings({...menu,qty:item.qty},item.servings)});}
       cartRestored=true;savedCart=null;
       if(items.length)$("cart-notice").textContent=cart.size?"Keranjang dipulihkan dengan harga terbaru. Periksa kembali sebelum memesan.":"Menu dari keranjang sebelumnya sudah tidak tersedia.";
     }
@@ -41,8 +52,8 @@ async function ambilData() {
     $("promotion-load-status").replaceChildren();renderBanners();
     renderTabs(); renderMenu(); renderBestSeller();updateBar();schedulePromoRefresh();
   } catch (error) {
-    promotionsReady=false;cekRoomStatus();$("promotion-banners").hidden=true;
-    $("promotion-load-status").replaceChildren(el("p","Menu dan harga promo belum bisa dimuat. Pemesanan sementara tidak tersedia.","promo-alert"),action("Coba lagi",ambilData));
+    promotionsReady=false;roomsReady=false;cekRoomStatus();$("promotion-banners").hidden=true;
+    $("promotion-load-status").replaceChildren(el("p","Menu, room, dan harga promo belum bisa dimuat. Pemesanan sementara tidak tersedia.","promo-alert"),action("Coba lagi",ambilData));
   }
 }
 function quantities(menu, refreshCart = false) {
@@ -57,7 +68,8 @@ function card(menu) {
   if(menu.contents)node.append(el("p",menu.contents,"bundle-contents"));
   const badges = [menu.offer_id && "🔥 PROMO", menu.best_seller && "⭐ BEST SELLER", menu.kategori === "PAKET" && "🎁 PAKET"].filter(Boolean);
   if (badges.length) node.append(el("p", badges.join(" · "), "text-xs"));
-  node.append(quantities(menu));
+  if(menu.tersedia===false){node.classList.add("sold-out");node.append(el("p","Habis sementara","sold-out-label"));}
+  else node.append(quantities(menu));
   return node;
 }
 function renderMenu() {
@@ -96,7 +108,7 @@ function resetCariSticky() { $("input-cari-sticky").value = ""; cekInputCariStic
 function ubahQty(id, delta) {
   if(!promotionsReady || checkingOrder)return;
   const menu = databaseMenu.find(m => String(m.id) === String(id));
-  if (!menu) return;
+  if (!menu || menu.tersedia===false) return;
   const item = cart.get(String(id)) || { ...menu, qty: 0, catatan: "" };
   item.qty = Math.max(0, Math.min(99, item.qty + delta));
   item.servings=normalizeServings(item,item.servings);
@@ -154,12 +166,12 @@ function appendServingControls(node,item){
 function hilangkanPopup() { $("layar-hitam").classList.remove("tampil"); document.body.style.overflow = ""; }
 function resetKeranjang() { if (confirm("Hapus semua item di keranjang?")) { cart.clear(); hilangkanPopup(); updateBar(); renderMenu(); renderBestSeller();$("cart-notice").textContent="Keranjang dikosongkan."; } }
 function syncCartPrices() {
-  for(const [id,item] of cart){const current=databaseMenu.find(menu=>String(menu.id)===id);if(current)cart.set(id,{...current,qty:item.qty,catatan:item.catatan,servings:normalizeServings({...current,qty:item.qty},item.servings)});else cart.delete(id);}
+  for(const [id,item] of cart){const current=databaseMenu.find(menu=>String(menu.id)===id);if(current&&current.tersedia!==false)cart.set(id,{...current,qty:item.qty,catatan:item.catatan,servings:normalizeServings({...current,qty:item.qty},item.servings)});else cart.delete(id);}
 }
 function renderBanners(){
   const section=$("promotion-banners"),track=el("div","","promo-track");
   for(const p of orderedBanners(customerPromotions).filter(p=>promotionRunning(p)&&p.banner)){
-    const candidates=databaseMenu.filter(m=>p.kind==="bundle"?m.id==="bundle:"+p.id:m.offer_id===p.id);
+    const candidates=databaseMenu.filter(m=>m.tersedia!==false).filter(m=>p.kind==="bundle"?m.id==="bundle:"+p.id:m.offer_id===p.id);
     if(!candidates.length)continue;
     const first=candidates[0];
     const banner=promotionBanner(p,candidates,()=>{
@@ -174,11 +186,14 @@ function renderBanners(){
 function whatsappURL(message) { return "https://wa.me/" + storeSettings.whatsapp + "?text=" + encodeURIComponent(message); }
 function openOrderWhatsApp(url) { window.location.assign(url); }
 async function jalankanKirimWA() {
-  if (!storeSettingsReady || !promotionsReady || checkingOrder || !room() || !cart.size || [...cart.values()].some(item=>!servingsComplete(item))) return;
+  if (!storeSettingsReady || !roomsReady || !promotionsReady || checkingOrder || !room() || !cart.size || [...cart.values()].some(item=>!servingsComplete(item))) return;
   checkingOrder=true;cekRoomStatus();
   const oldCart=JSON.stringify([...cart.values()].map(i=>[i.id,i.harga,i.nama,i.contents,i.servings]));
   try {
-    const [rows,promos,settings]=await Promise.all([readMenus(true),readPromotions(true),readStoreSettings()]);
+    const selectedRoom=room();
+    const [rows,promos,settings,rooms]=await Promise.all([readMenus(true),readPromotions(true),readStoreSettings(),readRooms(true)]);
+    applyCustomerRooms(rooms);
+    if(!room()||room()!==selectedRoom){alert("Room tidak lagi tersedia. Pilih room aktif sebelum memesan.");return;}
     baseCustomerMenus=rows;databaseMenu=orderedMenus(buildOfferCatalog(rows,promos));customerPromotions=promos;storeSettings=settings;syncCartPrices();persistCart();schedulePromoRefresh();
     if(oldCart!==JSON.stringify([...cart.values()].map(i=>[i.id,i.harga,i.nama,i.contents,i.servings]))) {
       renderTabs();renderMenu();renderBestSeller();renderBanners();updateBar();munculkanPopup();
@@ -203,7 +218,7 @@ function bukaBantuan() { $("layar-bantuan").classList.add("tampil"); }
 function tutupBantuan() { $("layar-bantuan").classList.remove("tampil"); }
 function kirimBantuan(request) {
   if (!storeSettingsReady) { alert("Informasi toko belum berhasil dimuat. Silakan muat ulang halaman."); return; }
-  if (!room()) { alert("Pilih room terlebih dahulu di bagian atas halaman."); return; }
+  if (!roomsReady || !room()) { alert("Pilih room terlebih dahulu di bagian atas halaman."); return; }
   window.open(whatsappURL("Halo " + storeSettings.store_name + ", saya dari ROOM " + room() + ". " + request + "."), "_blank", "noopener,noreferrer");
   tutupBantuan();
 }
@@ -237,7 +252,7 @@ function refreshScheduledPrices(){
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshScheduledPrices();});
 async function startCustomer() {
   storeSettingsReady = false;
-  deteksiRoom();
+  roomsReady=false;
   try {
     storeSettings = await readStoreSettings();
     storeSettingsReady = true;

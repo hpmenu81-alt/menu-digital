@@ -12,6 +12,7 @@ function resetForm() {
   if (busy) return;
   for (const id of ["edit_id", "nama", "harga", "kategori", "deskripsi", "foto"]) $(id).value = "";
   $("best_seller").checked = $("promo").checked = false;
+  $("tersedia").checked=true;
   $("fotoHint").classList.add("hidden");
   $("btn-simpan").textContent = "Simpan Menu";
   clearPreview();
@@ -28,6 +29,7 @@ function editMenu(menu) {
   $("edit_id").value = menu.id;
   $("best_seller").checked = !!menu.best_seller;
   $("promo").checked = !!menu.promo;
+  $("tersedia").checked=menu.tersedia!==false;
   $("fotoHint").classList.remove("hidden");
   const image = menuImage(menu.foto_url, menu.nama);
   if (image.hasAttribute("src")) { $("previewFoto").src = image.src; $("previewFoto").classList.remove("hidden"); }
@@ -38,7 +40,7 @@ function editMenu(menu) {
 function setBusy(value) {
   busy = value;
   $("admin-content").querySelectorAll("input,textarea,select,button").forEach(node => { node.disabled = value; });
-  if (!value) { $("settings-save").disabled = !editorLoaded; renderOrders(); $("promotion-save").disabled = !promotionLoaded; }
+  if (!value) { $("settings-save").disabled = !editorLoaded; renderOrders(); $("promotion-save").disabled = !promotionLoaded; $("room-code").disabled=!!roomEdit; $("room-save").disabled=!roomsLoaded; }
 }
 async function requireAdmin() {
   const { data, error } = await client.rpc("is_menu_admin");
@@ -49,6 +51,7 @@ async function simpanMenu() {
   try {
     const editId = $("edit_id").value;
     const payload = menuPayload({ nama: $("nama").value, harga: $("harga").value, kategori: $("kategori").value, deskripsi: $("deskripsi").value, best_seller: $("best_seller").checked, promo: $("promo").checked }, !!editId);
+    payload.tersedia=$("tersedia").checked;
     const file = $("foto").files[0];
     if (!editId && !file) throw new Error("Foto wajib diisi untuk menu baru.");
     const types = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
@@ -88,15 +91,17 @@ async function toggleField(id, field, value) {
 }
 function renderAdmin() {
   const keyword = $("searchAdmin").value.toLowerCase(), filter = $("filterAdmin").value;
-  const result = orderedMenus(buildOfferCatalog(menus,adminPromotionRows)).filter(m => [m.nama, m.kategori].some(v => String(v || "").toLowerCase().includes(keyword)) && ({ SEMUA: true, AKTIF: !!m.aktif, NONAKTIF: !m.aktif, BEST: !!m.best_seller, PROMO: !!m.offer_id })[filter]);
+  const result = orderedMenus(buildOfferCatalog(menus,adminPromotionRows)).filter(m => [m.nama, m.kategori].some(v => String(v || "").toLowerCase().includes(keyword)) && ({ SEMUA: true, AKTIF: !!m.aktif, NONAKTIF: !m.aktif, HABIS: m.aktif&&m.tersedia===false, BEST: !!m.best_seller, PROMO: !!m.offer_id })[filter]);
   $("list-menu").replaceChildren();
   for (const menu of result) {
     const card = el("article", "", "bg-slate-50 rounded-2xl p-3 border space-y-2");
     card.append(menuImage(menu.foto_url, menu.nama), el("h3", menu.nama, "font-black"), priceDisplay(menu), el("p", menu.kategori), el("p", menu.aktif ? "🟢 AKTIF" : "🔴 NONAKTIF"));
+    if(menu.aktif&&menu.tersedia===false)card.append(el("p","Habis sementara","sold-out-label"));
     if(menu.offer_id)card.append(el("p","Promo berjalan: "+menu.offer_title,"promo-help"));
     if(menu.contents)card.append(el("p",menu.contents,"promo-help"));
     const controls = el("div", "", "grid grid-cols-2 gap-2");
     if(!menu.is_bundle){
+      controls.append(action(menu.tersedia===false?"Tersedia lagi":"Tandai habis",()=>toggleField(menu.id,"tersedia",menu.tersedia===false)));
       controls.append(action("Edit", () => editMenu(menus.find(m=>String(m.id)===String(menu.id)))));
       for (const [field, label] of [["aktif", "Aktif"], ["best_seller", "Best Seller"]]) controls.append(action((menu[field] ? "Nonaktifkan " : "Aktifkan ") + label, () => toggleField(menu.id, field, !menu[field])));
     }
@@ -119,7 +124,11 @@ function showTab(tab) {
   $("panelList").classList.toggle("hidden", tab !== "list");
   $("panelPromotions").classList.toggle("hidden", tab !== "promotions");
   $("panelSettings").classList.toggle("hidden", tab !== "settings");
-  for (const name of ["Form", "List", "Settings", "Promotions"]) $("tab" + name).className = (name.toLowerCase() === tab ? "bg-orange-500 text-white" : "bg-slate-200 text-slate-700") + " rounded-2xl py-3 font-black text-xs uppercase";
+  for (const name of ["Form", "List", "Settings", "Promotions", "Dashboard", "Rooms", "History"]) $("tab" + name).className = (name.toLowerCase() === tab ? "bg-orange-500 text-white" : "bg-slate-200 text-slate-700") + " rounded-2xl py-3 font-black text-xs uppercase";
+  for(const name of ["Dashboard","Rooms","History"])$("panel"+name).classList.toggle("hidden",name.toLowerCase()!==tab);
+  if(tab==="dashboard")refreshDashboard();
+  if(tab==="rooms")openRooms();
+  if(tab==="history")loadHistory();
   if (tab === "list") loadMenu();
   if (tab === "settings") openSettings();
   if (tab === "promotions") openPromotions();
@@ -128,6 +137,7 @@ async function checkSession(session) {
   const version = ++authVersion;
   resetSettingsEditor();
   resetPromotionEditor();
+  resetOperations();
   authorized = false;
   ++loadVersion;
   menus = [];
@@ -145,6 +155,7 @@ async function checkSession(session) {
     $("login-panel").hidden = true;
     statusMessage("");
     await loadMenu();
+    showTab("dashboard");
   } catch (error) { if (version === authVersion) statusMessage(error.message); }
 }
 $("login-form").addEventListener("submit", async event => {

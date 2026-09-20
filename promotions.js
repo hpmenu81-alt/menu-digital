@@ -2,6 +2,7 @@
 let promotionClockOffset=0;
 function promotionNow(){return Date.now()+promotionClockOffset;}
 function promotionStatus(p,now=promotionNow()) {
+  if(p.archived)return "Diarsipkan";
   if(!p.active)return "Nonaktif";
   if(p.starts_at && Date.parse(p.starts_at)>now)return "Terjadwal";
   if(p.ends_at && Date.parse(p.ends_at)<=now)return "Berakhir";
@@ -67,7 +68,7 @@ function buildOfferCatalog(rows,promotions,now=promotionNow()) {
   });
   for(const p of active.filter(p=>p.kind==="bundle")) {
     const parts=p.items.map(item=>({menu:rows.find(m=>String(m.id)===String(item.menu_id)),quantity:item.quantity}));
-    if(!parts.length || parts.some(part=>!part.menu || !part.menu.aktif)) continue;
+    if(!parts.length || parts.some(part=>!part.menu || !part.menu.aktif || part.menu.tersedia===false)) continue;
     const normal=parts.reduce((sum,part)=>sum+Number(part.menu.harga)*part.quantity,0), price=Number(p.bundle_price);
     if(!Number.isSafeInteger(price)||price<1||price>=normal)continue;
     const contents=parts.map(part=>part.quantity+"× "+part.menu.nama).join(" + ");
