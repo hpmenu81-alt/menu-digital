@@ -19,7 +19,7 @@ let promos=[];
      window.supabase={createClient:()=>({storage:{from:()=>({upload:async()=>window.uploadFail?{error:{message:'Upload gagal'}}:{},getPublicUrl:()=>({data:{publicUrl:'https://images.test/banner.png'}})})},rpc:async name=>({data:name==="menu_server_time"?new Date().toISOString():window.allowed}),auth:{getSession:async()=>({data:{session:admin?{}:null}}),onAuthStateChange:()=>{}},from:table=>{
        let payload=null,insert=false,filters={};
        return {select(){return this},order(){return this},eq(k,v){filters[k]=v;return this},insert(p){payload=p;insert=true;return this},update(p){payload=p;return this},
-       async range(){if(table==='menu_promotions'&&window.failPromo)return {error:{message:'Network error'}};return {data:table==='menus'?window.mockRows.filter(m=>!filters.aktif||m.aktif):window.mockPromos.filter(p=>!filters.active||p.active)};},
+       async range(){if(table==='menu_promotions'&&window.failPromo)return {error:{message:'Network error'}};return {data:table==='menu_rooms'?[{"code":"101","label":"101","active":true,"floor":"Lantai","position":0,"version":0},{"code":"102","label":"102","active":true,"floor":"Lantai","position":1,"version":0},{"code":"201","label":"201","active":true,"floor":"Lantai","position":2,"version":0}]:table==='menus'?window.mockRows.filter(m=>!filters.aktif||m.aktif):window.mockPromos.filter(p=>!filters.active||p.active)};},
        async single(){
          if(table==='menu_settings')return {data:{id:1,version:0,store_name:'Toko',whatsapp:'6281255763976',address:'Samarinda',opening_hours:'',information:'',category_order:[],menu_order:[]}};
          if(!window.allowed)return {error:{message:'Denied'}};
@@ -30,7 +30,7 @@ let promos=[];
        }};
      }})};
    },{rows,promos,admin});
-   for(const file of ['common.js','settings.js','promotions.js',...(admin?['admin-promotions.js','admin-settings.js','admin.js']:['servings.js','cart-storage.js','customer.js'])])await page.addScriptTag({path:path.join(root,file)});
+   for(const file of ['common.js','settings.js','promotions.js',...(admin?['rooms.js','admin-operations.js','admin-promotions.js','admin-settings.js','admin.js']:['rooms.js','servings.js','cart-storage.js','customer.js'])])await page.addScriptTag({path:path.join(root,file)});
    if(admin)await page.waitForFunction(()=>!document.getElementById('admin-content').hidden);
    else{await page.waitForFunction(()=>promotionsReady);await page.evaluate(()=>{openOrderWhatsApp=url=>window.opened.push(url);});}
  }
